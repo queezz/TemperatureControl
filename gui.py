@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import font
 import time
 import threading
 import matplotlib.pyplot as plt
@@ -19,7 +20,7 @@ class MainWidget():
 
         self.root = tk.Tk()
 
-        self.costom_font = tk.font.Font(family="Arial",size=24)
+        self.costom_font = font.Font(family="Arial",size=24)
 
         self.root.title("Temperature Setting")
 
