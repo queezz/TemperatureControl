@@ -113,7 +113,10 @@ if __name__=="__main__":
 
     timenow = app.timer.now()
 
-    data_folder = "../data/temp/"
+    import os.path
+    data_folder = "../../data/temp/"
+    if not os.path.exists(data_folder):
+        os.makedirs(data_folder)
     data_name = data_folder + timenow.strftime("%Y_%m%d_%H%M")+ '.csv'
     app.data.to_csv(data_name,index=False)
 
