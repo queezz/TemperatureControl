@@ -463,16 +463,6 @@ class MainWidget(QtCore.QObject, UIWindow):
             self.adcWorker.setSampling(value)
             self.log_message(f"ADC sampling set to {value}")
 
-        # For MAX6675 min read time is 0.25s
-        # if self.tWorker is not None:
-        #     if value < 0.25:
-        #         value = 0.25
-        #     self.tWorker.setSampling(value)
-        #     self.log_message(f"MAX6675 sampling set to {value}")
-# 
-        # if self.dacWorker is not None:
-        #     self.dacWorker.setSampling(value)
-        #     self.log_message(f"DAC sampling set to {value}")
 
 
 
