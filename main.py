@@ -19,7 +19,7 @@ class TemperatureControl():
 
         thread1 = threading.Thread(target=self.app.main,daemon=True)
         thread2 = threading.Thread(target=self.tc.measure_temperature,daemon=True)
-        thread3 = threading.Thread(target=self.heater.start_control_arduino,daemon=True)
+        thread3 = threading.Thread(target=self.heater.start_control_ft232h,daemon=True)
         
         self.__sumE = 0
         self.__exE = 0

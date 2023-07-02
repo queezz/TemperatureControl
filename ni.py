@@ -31,7 +31,7 @@ class Thermocouple():
 
     def measure_temperature(self):
         with nidaqmx.Task() as task:
-            task.ai_channels.add_ai_thrmcpl_chan("cDAQ1Mod1/ai0",thermocouple_type = nidaqmx.constants.ThermocoupleType(self.tc_type))
+            task.ai_channels.add_ai_thrmcpl_chan("cDAQ1Mod1/ai0",thermocouple_type = nidaqmx.constants.ThermocoupleType(self.tc_type),cjc_source=nidaqmx.constants.CJCSource(10200))
             task.timing.cfg_samp_clk_timing(rate=1000)
             while self.measurement_flag:
                 self.temperature = task.read(number_of_samples_per_channel=1)

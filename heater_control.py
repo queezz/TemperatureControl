@@ -39,13 +39,17 @@ class HeaterControl():
         pin.direction = digitalio.Direction.OUTPUT
 
         while self.measurement_flag:
-            while self.duty == 1:
+            while self.duty == 1 & self.measurement_flag:
                 pin.value = True
                 time.sleep(0.01)
-            while self.duty == 0:
+            while self.duty == 0 & self.measurement_flag:
                 pin.value = False
                 time.sleep(0.01)
             pin.value = True
             time.sleep(0.01 * self.duty)
             pin.value = False
             time.sleep(0.01 * (1-self.duty))
+
+        pin.value = False
+
+
