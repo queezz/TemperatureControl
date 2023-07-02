@@ -1,0 +1,48 @@
+Settings Version: 1.0.0
+# Define your local settings in
+# localsettings = os.path.join(os.path.expanduser('~'),'.controlunit', 'settings.yml')
+# ~/.controlunit/settings.yml
+# If settings items are changed and settings version is higher then
+# the local one, local settings are ignored.
+
+Data Folder: ../data/temp
+# Save the info from Log Dock to this file in Data Folder
+Log File: controlunit.log
+
+
+# ================================================
+#
+# 4 channel 24-Bit Temperature Input Module : NI-9211
+# https://www.ni.com/ja-jp/support/model.ni-9211.html
+#
+# ================================================
+
+NI9211 Channels:
+  Tc0:
+    Channel: 0
+    Description: "Membrane Temperature"
+    Type: Thermocouple
+    Thermocouple Type: K
+    Sampling Rate: 14
+
+
+# ================================================
+#
+#GPIO Board : Adafruit FT232H
+# https://www.adafruit.com/product/2264
+# https://learn.adafruit.com/circuitpython-on-any-computer-with-ft232h/windows
+# https://learn.adafruit.com/circuitpython-on-any-computer-with-ft232h/pinouts
+# https://learn.adafruit.com/circuitpython-on-any-computer-with-ft232h/gpio
+#
+# ================================================
+# GPIO Board for control relay circuit of the membrane heater
+
+Max Temperature: 1200
+
+FT232H Channels:
+  Heater Output:
+    Pin: c0
+    Description: "Membrane Heater Output"
+  Signal Input:
+    Pin: c1
+    Description: "Signal Input for time synchronization with Raspberry Pi" 
