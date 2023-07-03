@@ -263,6 +263,7 @@ class NI9211(Worker):
         self.__startTime = startTime
         self.config = config
         self.__abort = False
+        self.qmssig = 0
 
     @QtCore.pyqtSlot()
     def abort(self):
@@ -275,7 +276,7 @@ class NI9211(Worker):
         """
         needs pigpio daemon
         """
-        self.columns = ["date", "time", "T", "PresetT"]
+        self.columns = self.config["Temperature Columns"]
         self.data = pd.DataFrame(columns=self.columns)
         self.temperature_setpoint = presetTemp
         self.sampling_rate = self.config["NI9211"]["Tc0"]["Sampling Rate"]
@@ -343,7 +344,7 @@ class NI9211(Worker):
         now = datetime.datetime.now()
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
-        new_row = pd.DataFrame(np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint]), columns=self.columns)
+        new_row = pd.DataFrame(np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint,self.qmssig]), columns=self.columns)
         self.data = pd.concat([self.data, new_row], ignore_index=True)
 
     def calculate_average(self):
@@ -396,8 +397,6 @@ class NI9211(Worker):
         self.sigDone.emit(self.sensor_name)
 
     def temperature_control(self):
-        print(self.temperature_setpoint)
-        print(self.temperature)
         e = self.temperature_setpoint - self.temperature
         integral = self.__sumE + e / self.sampling_rate
         derivative = (e - self.__exE) * self.sampling_rate
