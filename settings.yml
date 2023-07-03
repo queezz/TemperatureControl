@@ -14,6 +14,7 @@ Temperature Columns:
   - "time"
   - "T"
   - "PresetT"
+  - "Qms signal"
 
 
 # ================================================
@@ -49,6 +50,6 @@ FT232H:
   Heater Output:
     Pin: c0
     Description: "Membrane Heater Output"
-  Signal Input:
+  Sync Input:
     Pin: c1
     Description: "Signal Input for time synchronization with Raspberry Pi" 
