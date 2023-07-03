@@ -230,7 +230,6 @@ class MainWidget(QtCore.QObject, UIWindow):
 
         workers = {worker.sensor_name: worker for worker in [self.tWorker]}
         self.sensor_names = list(workers)
-        print(self.sensor_names)
 
         [self.start_thread(workers[s], threads[s]) for s in self.sensor_names]
 
