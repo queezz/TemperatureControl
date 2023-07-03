@@ -52,6 +52,7 @@ class HeaterContol(QtCore.QObject):
                 self.pin.value = False
                 time.sleep(0.01 * (1-self.duty))
                 self.app.processEvents()
+        self.pin.value = False
             
 
     def __setThread(self):
@@ -60,15 +61,15 @@ class HeaterContol(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def setAbort(self):
-        self.pin.Value = False
         self.abort = True
 
-class QmsSigSync(QtCore.QObject):
+class QmsSigSync():
     
-    def __init__(self, app):
-        super().__init__()
-        self.app = app
+    def __init__(self):
+        # super().__init__()
+        # self.app = app
         self.abort = False
+        self.init_board()
 
     def init_board(self):
         self.pin = pin_config(CHSYNC, "in")        
@@ -115,4 +116,6 @@ def pin_config(pin_name, direction):
         
 
 if __name__ == "__main__":
-    pass
+    app = QmsSigSync()
+    while True:
+        print(app.get_sig())
