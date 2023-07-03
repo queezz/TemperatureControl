@@ -343,8 +343,6 @@ class MainWidget(QtCore.QObject, UIWindow):
             self.tWorker.qmssig = 1
         else:
             self.tWorker.qmssig = 0
-        print(self.qmssig)
-
 
     # Mark: connecting slots with threads
     @QtCore.pyqtSlot(list)

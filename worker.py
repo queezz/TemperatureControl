@@ -397,8 +397,6 @@ class NI9211(Worker):
         self.sigDone.emit(self.sensor_name)
 
     def temperature_control(self):
-        print(self.temperature_setpoint)
-        print(self.temperature)
         e = self.temperature_setpoint - self.temperature
         integral = self.__sumE + e / self.sampling_rate
         derivative = (e - self.__exE) * self.sampling_rate
