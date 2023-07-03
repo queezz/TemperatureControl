@@ -14,6 +14,8 @@ except:
 config = select_settings(verbose=False)
 CHHEATER = config["FT232H"]["Heater Output"]["Pin"]
 
+CHSYNC = config["FT232H"]["Sync Input"]["Pin"]
+
 
 
 class HeaterContol(QtCore.QObject):
@@ -60,6 +62,20 @@ class HeaterContol(QtCore.QObject):
     def setAbort(self):
         self.pin.Value = False
         self.abort = True
+
+class QmsSigSync(QtCore.QObject):
+    
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+        self.abort = False
+
+    def init_board(self):
+        self.pin = pin_config(CHSYNC, "in")        
+
+    def get_sig(self):
+        return self.pin.value
+
 
 
 def pin_config(pin_name, direction):
