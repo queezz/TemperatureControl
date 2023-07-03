@@ -38,7 +38,7 @@ class ControlDock(Dock):
         self.OnOffSW = OnOffSwitch()
         self.OnOffSW.setFont(QtGui.QFont("serif", 16))
 
-        self.explamp = QLed(self, onColour=QLed.Green, shape=QLed.Circle)
+        self.explamp = QLed(self, onColour=QLed.Red, shape=QLed.Circle)
         self.explamp.setValue(False)
 
 
