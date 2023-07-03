@@ -170,7 +170,7 @@ class AnalogGaugeWidget(QWidget):
         # self.enable_scale_text = True
         self.set_enable_ScaleText(True)
         self.scale_fontname = "Decorative"
-        self.initial_scale_fontsize = 15
+        self.initial_scale_fontsize = 10
         self.scale_fontsize = self.initial_scale_fontsize
 
         # initialize Main value text
@@ -228,9 +228,9 @@ class AnalogGaugeWidget(QWidget):
                     [
                         QPoint(4, 30),
                         QPoint(-4, 30),
-                        QPoint(-2, -self.widget_diameter / 2 * self.needle_scale_factor),
-                        QPoint(0, -self.widget_diameter / 2 * self.needle_scale_factor - 6),
-                        QPoint(2, -self.widget_diameter / 2 * self.needle_scale_factor),
+                        QPoint(-2, int(-self.widget_diameter / 2 * self.needle_scale_factor)),
+                        QPoint(0, int(-self.widget_diameter / 2 * self.needle_scale_factor - 6)),
+                        QPoint(2, int(-self.widget_diameter / 2 * self.needle_scale_factor)),
                     ]
                 )
             ]
@@ -246,8 +246,8 @@ class AnalogGaugeWidget(QWidget):
         # needle = [2]
         # print(str(type(needle[0])).split("'")[1])
 
-        self.scale_fontsize = self.initial_scale_fontsize * self.widget_diameter / 250
-        self.value_fontsize = self.initial_value_fontsize * self.widget_diameter / 400
+        self.scale_fontsize = int(self.initial_scale_fontsize * self.widget_diameter / 250)
+        self.value_fontsize = int(self.initial_value_fontsize * self.widget_diameter / 400)
 
         # print("slotMethod end")
         pass
@@ -580,8 +580,8 @@ class AnalogGaugeWidget(QWidget):
 
         painter.rotate(self.scale_angle_start_value - self.angle_offset)
         steps_size = float(self.scale_angle_size) / float(self.scala_main_count)
-        scale_line_outer_start = self.widget_diameter / 2
-        scale_line_lenght = (self.widget_diameter / 2) - (self.widget_diameter / 20)
+        scale_line_outer_start = int(self.widget_diameter / 2)
+        scale_line_lenght = int((self.widget_diameter / 2) - (self.widget_diameter / 20))
         # print(stepszize)
         for i in range(self.scala_main_count + 1):
             painter.drawLine(scale_line_lenght, 0, scale_line_outer_start, 0)
@@ -620,8 +620,8 @@ class AnalogGaugeWidget(QWidget):
             h = fm.height()
             painter.setFont(QFont(self.scale_fontname, self.scale_fontsize))
             angle = angle_distance * i + float(self.scale_angle_start_value - self.angle_offset)
-            x = text_radius * math.cos(math.radians(angle))
-            y = text_radius * math.sin(math.radians(angle))
+            x = int(text_radius * math.cos(math.radians(angle)))
+            y = int(text_radius * math.sin(math.radians(angle)))
             # print(w, h, x, y, text)
             text = [
                 x - int(w / 2),
@@ -645,8 +645,8 @@ class AnalogGaugeWidget(QWidget):
         painter.setPen(Qt.black)
         painter.rotate(self.scale_angle_start_value - self.angle_offset)
         steps_size = float(self.scale_angle_size) / float(self.scala_main_count * self.scala_subdiv_count)
-        scale_line_outer_start = self.widget_diameter / 2
-        scale_line_lenght = (self.widget_diameter / 2) - (self.widget_diameter / 40)
+        scale_line_outer_start = int(self.widget_diameter / 2)
+        scale_line_lenght = int((self.widget_diameter / 2) - (self.widget_diameter / 40))
         for i in range((self.scala_main_count * self.scala_subdiv_count) + 1):
             painter.drawLine(scale_line_lenght, 0, scale_line_outer_start, 0)
             painter.rotate(steps_size)

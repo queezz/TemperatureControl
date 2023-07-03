@@ -9,6 +9,12 @@ Data Folder: ../data/temp
 # Save the info from Log Dock to this file in Data Folder
 Log File: controlunit.log
 
+Temperature Columns:
+  - "date"
+  - "time"
+  - "T"
+  - "PresetT"
+
 
 # ================================================
 #
@@ -17,7 +23,7 @@ Log File: controlunit.log
 #
 # ================================================
 
-NI9211 Channels:
+NI9211:
   Tc0:
     Channel: 0
     Description: "Membrane Temperature"
@@ -25,7 +31,7 @@ NI9211 Channels:
     Thermocouple Type: K
     Sampling Rate: 10
 
-
+Sampling Time: 0.1
 # ================================================
 #
 # GPIO Board : Adafruit FT232H
@@ -39,7 +45,7 @@ NI9211 Channels:
 
 Max Temperature: 1200
 
-FT232H Channels:
+FT232H:
   Heater Output:
     Pin: c0
     Description: "Membrane Heater Output"

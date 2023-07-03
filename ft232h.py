@@ -12,7 +12,7 @@ except:
     print("no board module for ft232h")
 
 config = select_settings(verbose=False)
-CHHEATER = config["FT232H"]["Hearer Output"]["Pin"]
+CHHEATER = config["FT232H"]["Heater Output"]["Pin"]
 
 
 
@@ -33,20 +33,24 @@ class HeaterContol(QtCore.QObject):
     def work(self):
         self.__setThread()
         #GPIO Setting : C0 will be output port.
-        pin = self.pin_config(CHHEATER, "out")
+        self.pin = pin_config(CHHEATER, "out")
 
         while not self.abort:
-            while self.duty == 1:
-                pin.value = True
+            if self.duty == 1:
+                self.pin.value = True
+                self.app.processEvents() 
                 time.sleep(0.01)
-            while self.duty == 0:
-                pin.value = False
+            elif self.duty == 0:
+                self.pin.value = False
+                self.app.processEvents()
                 time.sleep(0.01)
-            pin.value = True
-            time.sleep(0.01 * self.duty)
-            pin.value = False
-            time.sleep(0.01 * (1-self.duty))
-            self.app.processEvents()
+            elif 0 < self.duty < 1:
+                self.pin.value = True
+                time.sleep(0.01 * self.duty)
+                self.pin.value = False
+                time.sleep(0.01 * (1-self.duty))
+                self.app.processEvents()
+            
 
     def __setThread(self):
         self.threadName = QtCore.QThread.currentThread().objectName()
@@ -54,7 +58,9 @@ class HeaterContol(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def setAbort(self):
+        self.pin.Value = False
         self.abort = True
+
 
 def pin_config(pin_name, direction):
     if pin_name == "c0":

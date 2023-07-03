@@ -254,6 +254,7 @@ class MAX6675(Worker):
 
 class NI9211(Worker):
     sigAbortHeater = QtCore.pyqtSignal()
+    sigAbortThermocouple = QtCore.pyqtSignal()
 
     def __init__(self, sensor_name, app, startTime, config):
         super().__init__(sensor_name, app, startTime, config)
@@ -267,7 +268,7 @@ class NI9211(Worker):
     def abort(self):
         message = "Worker thread {} aborting acquisition".format(self.sensor_name)
         # self.send_message.emit(message)
-        # print(message)
+        print(message)
         self.__abort = True
 
     def setTempWorker(self, presetTemp: int):
@@ -278,6 +279,7 @@ class NI9211(Worker):
         self.data = pd.DataFrame(columns=self.columns)
         self.temperature_setpoint = presetTemp
         self.sampling_rate = self.config["NI9211"]["Tc0"]["Sampling Rate"]
+        self.sampling = 1/ self.sampling_rate
 
         self.__sumE = 0
         self.__exE = 0
@@ -307,12 +309,12 @@ class NI9211(Worker):
         Select MAX6675 sensor on the SPI
         Need to start PIGPIO daemon
         """
-        self.thermocouple = Thermocouple()
+        self.thermocouple = Thermocouple(self.__app)
         self.thread_thermocouple = QtCore.QThread()
         self.thread_thermocouple.setObjectName("thermocouple")
         self.thermocouple.moveToThread(self.thread_thermocouple)
-        self.thread_thermocouple.started.connect(self.thermocouple.measure_temperature)
-        self.sigAbortHeater.connect(self.thermocouple.setAbort)
+        self.thread_thermocouple.started.connect(self.thermocouple.work)
+        self.sigAbortThermocouple.connect(self.thermocouple.setAbort)
         self.thread_thermocouple.start()
         
 
@@ -320,7 +322,7 @@ class NI9211(Worker):
         """
         Read NI-9211 sensor output
         """
-        self.temperature = self.thermocouple.temperature[0]
+        self.temperature = self.thermocouple.temperature
 
     def send_processed_data_to_main_thread(self):
         """
@@ -341,9 +343,7 @@ class NI9211(Worker):
         now = datetime.datetime.now()
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
-        new_row = pd.DataFrame(
-            np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint]), columns=self.columns
-        )
+        new_row = pd.DataFrame(np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint]), columns=self.columns)
         self.data = pd.concat([self.data, new_row], ignore_index=True)
 
     def calculate_average(self):
@@ -381,16 +381,23 @@ class NI9211(Worker):
             self.calculate_average()
             self.send_processed_data_to_main_thread()
             self.sigAbortHeater.emit()
+            self.sigAbortThermocouple.emit()
             self.__sumE = 0
+            
+
+            self.thread_thermocouple.quit()
             self.thread_heater.quit()
+            self.thread_thermocouple.wait()
             self.thread_heater.wait()
 
 
         self.thread_heater = None
+        self.thread_thermocouple = None
         self.sigDone.emit(self.sensor_name)
 
     def temperature_control(self):
-
+        print(self.temperature_setpoint)
+        print(self.temperature)
         e = self.temperature_setpoint - self.temperature
         integral = self.__sumE + e / self.sampling_rate
         derivative = (e - self.__exE) * self.sampling_rate

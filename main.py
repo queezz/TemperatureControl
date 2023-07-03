@@ -18,7 +18,7 @@ import time
 
 # must inherit QtCore.QObject in order to use 'connect'
 class MainWidget(QtCore.QObject, UIWindow):
-    # DEFAULT_TEMPERATURE = 0
+    DEFAULT_TEMPERATURE = 0
     DEFALT_VOLTAGE = 0
     STEP = 3
 
@@ -46,23 +46,18 @@ class MainWidget(QtCore.QObject, UIWindow):
 
         # Plot line colors
         self.currentvalues = {"T": 0}
-        self.currentvalues = {i: 0 for i in self.config["ADC Signal Names"] + ["T"]}
-        self.currentvalues = {i: 0 for i in self.config["T"]}
+        self.currentvalues = {i: 0 for i in ["T"]}
         self.baratronsignal1 = 0
         self.baratronsignal2 = 0
         self.pens = {
             "T": {"color": "#5999ff", "width": 2},
             "trigger": {"color": "#edbc34", "width": 2},
         }
-        self.triggerPlot = self.graph.plaPl.plot(pen=self.pens["trigger"])
+
         self.valueTPlot = self.graph.tempPl.plot(pen=self.pens["T"])
-        self.graph.tempPl.setXLink(self.graph.presPl)
         self.graph.tempPl.setYRange(0, 320, 0)
 
         self.tWorker = None
-        self.adcWorker = None
-        self.dacWorker = None
-        self.calibrating = False
 
         self.update_plot_timewindow()
 
@@ -121,6 +116,7 @@ class MainWidget(QtCore.QObject, UIWindow):
             )
             if reply == QtWidgets.QMessageBox.Yes:
                 self.abort_all_threads()
+                print("end point 8")
                 self.controlDock.quitBtn.setEnabled(True)
             else:
                 self.controlDock.OnOffSW.setChecked(True)
@@ -227,6 +223,7 @@ class MainWidget(QtCore.QObject, UIWindow):
 
         workers = {worker.sensor_name: worker for worker in [self.tWorker]}
         self.sensor_names = list(workers)
+        print(self.sensor_names)
 
         [self.start_thread(workers[s], threads[s]) for s in self.sensor_names]
 
@@ -298,7 +295,7 @@ class MainWidget(QtCore.QObject, UIWindow):
                 os.path.abspath(self.datapath), f"cu_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             )
             with open(self.savepaths[sensor_name], "w") as f:
-                f.writelines(self.generate_header_adc())
+                f.writelines(self.generate_header_temperature())
 
     def generate_header_tc(self):
         """
@@ -323,8 +320,7 @@ class MainWidget(QtCore.QObject, UIWindow):
             "# Control Unit Temperature Control signals\n",
             f"# Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n",
             f"# Columns: {', '.join(self.config['Temperature Columns'])}\n",
-            f"# Heater GPIO: {self.config['Heater GPIO']}\n",
-            f"# LED GPIO: {self.config['LED GPIO']}\n",
+            f"# Heater Pin: {self.config['FT232H']['Heater Output']['Pin']}\n",
             "#\n",
             "# [Data]\n",
         ]
@@ -423,7 +419,6 @@ class MainWidget(QtCore.QObject, UIWindow):
         )
         self.__workers_done += 1
         self.reset_data(sensor_name)
-
         if self.__workers_done == 2:
             self.abort_all_threads()
 
@@ -433,6 +428,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         for thread, worker in self.__threads:
             thread.quit()
             thread.wait()
+
 
         self.__threads = []
 
