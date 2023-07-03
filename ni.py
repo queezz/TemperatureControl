@@ -47,7 +47,6 @@ class Thermocouple(QtCore.QObject):
             while not self.abort:
                 self.temperature = task.read(number_of_samples_per_channel=1)[0]
                 self.measuring_flag = True
-                # print(self.abort)
                 self.app.processEvents()
 
     def __setThread(self):

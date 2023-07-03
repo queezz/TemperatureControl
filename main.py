@@ -116,7 +116,6 @@ class MainWidget(QtCore.QObject, UIWindow):
             )
             if reply == QtWidgets.QMessageBox.Yes:
                 self.abort_all_threads()
-                print("end point 8")
                 self.controlDock.quitBtn.setEnabled(True)
             else:
                 self.controlDock.OnOffSW.setChecked(True)
