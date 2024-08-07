@@ -214,8 +214,9 @@ class MAX6675(Worker):
 
     def temperature_control(self):
         """
-        Shouldn't the self.sampling here be 0.25, not the one for ADC?
+        PID for MAX6675 class
         """
+        return # finding out which part of the code controls the relay
         e = self.temperature_setpoint - self.average
         integral = self.__sumE + e * self.sampling
         derivative = (e - self.__exE) / self.sampling
@@ -398,6 +399,8 @@ class NI9211(Worker):
         self.sigDone.emit(self.sensor_name)
 
     def temperature_control(self):
+        """ NI class PID """
+        # return # does this part actually work? It does
         e = self.temperature_setpoint - self.temperature
         integral = self.__sumE + e / self.sampling_rate
         derivative = (e - self.__exE) * self.sampling_rate
@@ -411,14 +414,26 @@ class NI9211(Worker):
         if integral < -0.5:
             integral = 0
 
-        if e > 20: # TODO Adjustment
-            self.membrane_heater.duty = 1
-        elif e >= 0:
+        # This part ignored Kp, Ki, Kd
+        # if e > 20: self.membrane_heater.duty = 1
+        # This was required because the ouptupt is not calculated properly.
+        # The PID formula should get us max (1) when required. Otherwise it's not properly calibrated
+        
+
+        if e >= 0:
             output = Kp * e + Ki * integral + Kd * derivative
-            output = output * 0.0002 # デューティ比の仕様に応じてここも変える, PWMの発信源を別スレッドで作る(Class)
+            output = output * 0.0001 # Reduce duty cicle, but why? PID should give the good result, no?
             self.membrane_heater.setOnLight(max(output, 0))
         else:
             self.membrane_heater.setOnLight(0)
+
+        """
+        Duty means for this fraction of 0.01s relay is turned on.
+        self.pin.value = True
+        time.sleep(0.01 * self.duty)
+        self.pin.value = False
+        time.sleep(0.01 * (1-self.duty))
+        """
 
         self.__exE = e
         self.__sumE = integral
