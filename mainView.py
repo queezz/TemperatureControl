@@ -5,7 +5,7 @@ from pyqtgraph.dockarea import DockArea, Dock
 from components.docks.log import LogDock
 from components.docks.plots import PlotScaleDock
 from components.docks.control import ControlDock
-from components.docks.tempcontrol import HeaterControl
+from components.docks.tempcontrol import HeaterControl, CathodeBoxTemperature
 from components.docks.settings import SettingsDock
 from components.widgets.graph import Graph
 
@@ -21,8 +21,9 @@ class UIWindow(object):
         self.plotDock = Dock("Plots", size=(300, 400))
         self.controlDock = ControlDock()
         self.tempcontrolDock = HeaterControl()
+        self.cathodeBoxDock = CathodeBoxTemperature()
         self.logDock = LogDock()
-        [i.setStretch(*(10, 20)) for i in [self.controlDock, self.logDock, self.tempcontrolDock]]
+        [i.setStretch(*(10, 20)) for i in [self.controlDock, self.logDock, self.tempcontrolDock,self.cathodeBoxDock]]
         self.controlDock.setStretch(*(10, 300))
         self.graph = Graph()
         self.scaleDock = PlotScaleDock()
@@ -54,6 +55,7 @@ class UIWindow(object):
         self.area.addDock(self.scaleDock, "left", self.plotDock)
         self.area.addDock(self.controlDock, "above", self.scaleDock)
         self.area.addDock(self.tempcontrolDock, "bottom", self.controlDock)
+        self.area.addDock(self.cathodeBoxDock, "bottom", self.tempcontrolDock)
 
         self.plotDock.addWidget(self.graph)
 
@@ -68,7 +70,7 @@ class UIWindow(object):
 if __name__ == "__main__":
     import sys
 
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     ui = UIWindow()
     ui.showMain()
     sys.exit(app.exec_())

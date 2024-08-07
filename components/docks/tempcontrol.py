@@ -64,6 +64,39 @@ class HeaterControl(Dock):
         self.update_displayed_temperatures(temperature, temp_now)
         self.temperatureSB.setValue(temperature)
 
+class CathodeBoxTemperature(Dock):
+    def __init__(self):
+        super().__init__("Cathode temp")
+        self.widget = pg.LayoutWidget()
+        self.tempBw = QtWidgets.QTextBrowser()
+        self.tempBw.setMinimumSize(QtCore.QSize(80, 60))
+        self.tempBw.setMaximumHeight(60)
+        self.set_layout()
+
+    def set_layout(self):
+        self.addWidget(self.widget)
+
+        self.widget.addWidget(self.tempBw, 0, 0, 1, 2)
+
+        self.verticalSpacer = QtWidgets.QSpacerItem(
+            0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding
+        )
+        # self.widget.layout.setVerticalSpacing(0)
+        self.widget.layout.addItem(self.verticalSpacer)
+
+    def set_label_font(self, text: str, color: str):
+        txt = "<font color={}><h4>{}</h4></font>".format(color, text)
+        return txt
+
+    def update_displayed_temperatures(self,temp_now):
+        """ set values into browser"""
+        htmltag = '<font size=6 color="#d1451b">'
+        htag1 = '<font size=6 color = "#4275f5">'
+        cf = "</font>"
+        self.tempBw.setText(
+            f"{htmltag}{temp_now} {DEGREE_SMB}C{cf}"
+        )
+
 
 if __name__ == "__main__":
     pass

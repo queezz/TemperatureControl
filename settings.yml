@@ -15,6 +15,7 @@ Temperature Columns:
   - "T"
   - "PresetT"
   - "Qms signal"
+  - "Cathode Box T"
 
 
 # ================================================
@@ -28,6 +29,12 @@ NI9211:
   Tc0:
     Channel: 0
     Description: "Membrane Temperature"
+    Type: Thermocouple
+    Thermocouple Type: K
+    Sampling Rate: 10
+  Tc1:
+    Channel: 1
+    Description: "Cathode Box Temperature"
     Type: Thermocouple
     Thermocouple Type: K
     Sampling Rate: 10

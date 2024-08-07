@@ -30,6 +30,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.__app = app
         self.connections()
         self.tempcontrolDock.set_heating_goal(self.DEFAULT_TEMPERATURE, "---")
+        self.cathodeBoxDock.update_displayed_temperatures("---")
 
         QtCore.QThread.currentThread().setObjectName("main")
 
@@ -46,8 +47,8 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.sampling = self.config["Sampling Time"]
 
         # Plot line colors
-        self.currentvalues = {"T": 0}
-        self.currentvalues = {i: 0 for i in ["T"]}
+        # self.currentvalues = {"T": 0}
+        self.currentvalues = {i: 0 for i in ["T","Cathode Box T"]}
         self.baratronsignal1 = 0
         self.baratronsignal2 = 0
         self.pens = {
@@ -219,7 +220,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         threads = {}
 
 
-        # NI9211 thermocouple sensor for Membrane temperature with PID
+        # NI9211_0 thermocouple sensor for Membrane temperature with PID
         sensor_name = "NI9211"
         threads[sensor_name] = QtCore.QThread()
         threads[sensor_name].setObjectName(f"{sensor_name}")
@@ -327,7 +328,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         worker.send_message.connect(self.log_message)
         self.sigAbortWorkers.connect(worker.abort)
 
-    def update_current_values(self):
+    def update_current_values(self,sensor_name):
         """
         update current values when new signal comes
         """
@@ -335,13 +336,9 @@ class MainWidget(QtCore.QObject, UIWindow):
         # TODO: updated dislpayed valuves from dataframes
 
         self.tempcontrolDock.update_displayed_temperatures(self.__temp, f"{self.currentvalues['T']:.0f}")
+        self.cathodeBoxDock.update_displayed_temperatures(f"{self.currentvalues['Cathode Box T']:.0f}")
         self.controlDock.gaugeT.update_value(self.currentvalues["T"])
-        self.qmssig = self.qmssigreader.get_sig()
-        self.controlDock.explamp.setValue(self.qmssig)
-        if self.qmssig:
-            self.tWorker.qmssig = 1
-        else:
-            self.tWorker.qmssig = 0
+
 
     # Mark: connecting slots with threads
     @QtCore.pyqtSlot(list)
@@ -364,10 +361,11 @@ class MainWidget(QtCore.QObject, UIWindow):
             # here 3 is number of data points recieved from worker.
             # TODO: update to self.newdata[sensor_name]['T'].mean()
             self.currentvalues["T"] = self.datadict[sensor_name].iloc[-3:]["T"].mean()
+            self.currentvalues["Cathode Box T"] = self.datadict[sensor_name].iloc[-3:]["Cathode Box T"].mean()
             self.update_plots(sensor_name)
 
 
-        self.update_current_values()
+        self.update_current_values(sensor_name)
 
     def calculate_skip_points(self, l, noskip=5000):
         return 1 if l < noskip else l // noskip + 1

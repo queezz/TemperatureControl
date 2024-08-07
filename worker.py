@@ -324,6 +324,7 @@ class NI9211(Worker):
         Read NI-9211 sensor output
         """
         self.temperature = self.thermocouple.temperature
+        self.cathodeBoxTemperature = self.thermocouple.cathodeBoxTemperature
 
     def send_processed_data_to_main_thread(self):
         """
@@ -344,7 +345,7 @@ class NI9211(Worker):
         now = datetime.datetime.now()
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
-        new_row = pd.DataFrame(np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint,self.qmssig]), columns=self.columns)
+        new_row = pd.DataFrame(np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint,self.qmssig,self.cathodeBoxTemperature]), columns=self.columns)
         self.data = pd.concat([self.data, new_row], ignore_index=True)
 
     def calculate_average(self):
@@ -410,7 +411,7 @@ class NI9211(Worker):
         if integral < -0.5:
             integral = 0
 
-        if e > 100: # TODO Adjustment
+        if e > 20: # TODO Adjustment
             self.membrane_heater.duty = 1
         elif e >= 0:
             output = Kp * e + Ki * integral + Kd * derivative
@@ -423,9 +424,6 @@ class NI9211(Worker):
         self.__sumE = integral
         pass
     
-
-
-
 
 if __name__ == "__main__":
     pass
