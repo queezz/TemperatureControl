@@ -4,14 +4,7 @@ from pyqtgraph.dockarea import Dock
 
 # from components.scaleButtons import ScaleButtons
 from ..buttons.toggles import MySwitch, OnOffSwitch, QmsSwitch
-from ..widgets.analoggauge import AnalogGaugeWidget
-from readsettings import select_settings
 from QLed import QLed
-
-config = select_settings(verbose=False)
-print("GET CONFIG: control.py")
-print(f'config["Max Temperature"] {config["Max Temperature"]}')
-MAXTEMP = config["Max Temperature"]
 
 
 class ControlDock(Dock):
@@ -33,23 +26,12 @@ class ControlDock(Dock):
         [self.scaleBtn.addItem(i) for i in items]
         self.sampling_windows = {i: j for i, j in zip(items, sizes)}
 
-
         self.FullNormSW = MySwitch()
         self.OnOffSW = OnOffSwitch()
         self.OnOffSW.setFont(QtGui.QFont("serif", 16))
 
         self.explamp = QLed(self, onColour=QLed.Red, shape=QLed.Circle)
         self.explamp.setValue(False)
-
-
-
-        # Analog Gauge to show Temperature
-        self.gaugeT = AnalogGaugeWidget()
-        self.gaugeT.set_MinValue(0)
-        self.gaugeT.set_MaxValue(MAXTEMP)
-        self.gaugeT.set_total_scale_angle_size(180)
-        self.gaugeT.set_start_scale_angle(180)
-        self.gaugeT.set_enable_value_text(False)
 
         self.__setLayout()
 
@@ -61,12 +43,7 @@ class ControlDock(Dock):
         self.widget.addWidget(self.quitBtn, 0, 2)
 
         self.widget.addWidget(self.FullNormSW, 1, 0)
-        self.widget.addWidget(self.scaleBtn, 1, 1, 1,2)
-        
-
-        # Temperature analouge gauge
-        self.widget.addWidget(self.gaugeT, 2, 0, 10, 2)
-
+        self.widget.addWidget(self.scaleBtn, 1, 1, 1, 2)
 
         self.verticalSpacer = QtWidgets.QSpacerItem(
             0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding

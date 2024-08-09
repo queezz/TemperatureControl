@@ -67,6 +67,7 @@ class HeaterContol(QtCore.QObject):
                 time.sleep(DUTYCYCLE * (1 - self.duty))
                 self.app.processEvents()
         self.pin.value = False
+        print("HeaterControl: pin output set to False")
 
     def __setThread(self):
         self.threadName = QtCore.QThread.currentThread().objectName()

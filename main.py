@@ -149,9 +149,9 @@ class MainWidget(QtCore.QObject, UIWindow):
         value = float(txt.split(" ")[0])
         self.sampling = value
         self.update_plot_timewindow()
-        if self.adcWorker is not None:
-            self.adcWorker.setSampling(value)
-            self.log_message(f"ADC sampling set to {value}")
+        if self.tWorker is not None:
+            self.tWorker.setSampling(value)
+            self.log_message(f"Temperature sampling set to {value}")
 
     # MARK: plotting
     def update_plot_timewindow(self):

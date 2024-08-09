@@ -361,12 +361,12 @@ class NI9211(Worker):
         """
         self.average = self.data["T"].mean()
 
+    # MARK: PID NI
     def setPresetTemp(self, newTemp: int):
         self.temperature_setpoint = newTemp
-        self.prep_pid()
+        self.pid.setpoint = self.temperature_setpoint
         return
 
-    # MARK: PID NI
     def prep_pid(self):
         """
         Set PID parameters
@@ -443,7 +443,7 @@ class NI9211(Worker):
         """
         message = "Worker thread {} aborting acquisition".format(self.sensor_name)
         # self.send_message.emit(message)
-        print(message)
+        # print(message)
         self.__abort = True
 
 

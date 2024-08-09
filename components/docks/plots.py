@@ -18,7 +18,6 @@ class PlotScaleDock(Dock):
         self.Tmax.setMinimumSize(QtCore.QSize(60, 60))
         self.Tmax.setSingleStep(50)
 
-
         [
             i.setStyleSheet(
                 "QSpinBox::up-button   { width: 50px; }\n"
@@ -33,8 +32,8 @@ class PlotScaleDock(Dock):
     def __setLayout(self):
         self.addWidget(self.widget)
         self.widget.addWidget(self.Tmax, 0, 0)
-        self.widget.addWidget(self.togT, 1, 1)
-        self.widget.addWidget(self.autoscale, 5, 1)
+        self.widget.addWidget(self.togT, 0, 1)
+        self.widget.addWidget(self.autoscale, 0, 2)
 
         self.verticalSpacer = QtWidgets.QSpacerItem(
             0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding

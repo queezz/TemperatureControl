@@ -6,6 +6,7 @@ from components.docks.log import LogDock
 from components.docks.plots import PlotScaleDock
 from components.docks.control import ControlDock
 from components.docks.tempcontrol import HeaterControl, CathodeBoxTemperature
+from components.docks.analog_temperature import AnalogTemperatureGauge
 from components.docks.settings import SettingsDock
 from components.widgets.graph import Graph
 
@@ -22,8 +23,18 @@ class UIWindow(object):
         self.controlDock = ControlDock()
         self.tempcontrolDock = HeaterControl()
         self.cathodeBoxDock = CathodeBoxTemperature()
+        self.tGauge = AnalogTemperatureGauge()
         self.logDock = LogDock()
-        [i.setStretch(*(10, 20)) for i in [self.controlDock, self.logDock, self.tempcontrolDock,self.cathodeBoxDock]]
+        [
+            i.setStretch(*(10, 20))
+            for i in [
+                self.controlDock,
+                self.logDock,
+                self.tempcontrolDock,
+                self.cathodeBoxDock,
+                self.tGauge,
+            ]
+        ]
         self.controlDock.setStretch(*(10, 300))
         self.graph = Graph()
         self.scaleDock = PlotScaleDock()
@@ -52,10 +63,11 @@ class UIWindow(object):
         self.tabwidg.addTab(self.area, "Data")
 
         self.area.addDock(self.plotDock, "top")
-        self.area.addDock(self.scaleDock, "left", self.plotDock)
-        self.area.addDock(self.controlDock, "above", self.scaleDock)
+        self.area.addDock(self.controlDock, "left", self.plotDock)
+        self.area.addDock(self.scaleDock, "bottom", self.controlDock)
         self.area.addDock(self.tempcontrolDock, "bottom", self.controlDock)
         self.area.addDock(self.cathodeBoxDock, "bottom", self.tempcontrolDock)
+        # self.area.addDock(self.tGauge, "bottom", self.controlDock)
 
         self.plotDock.addWidget(self.graph)
 
