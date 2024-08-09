@@ -1,59 +1,72 @@
-import time
-from PyQt5 import QtCore
-from readsettings import select_settings
-import os
-os.environ['BLINKA_FT232H'] = '1' #Setting Environmental Variable
+"""
+GPIO for Windows, FT232H by Adafruit
+Solid state relay PWM control
+"""
 
 import time
+import os
+from PyQt5 import QtCore
+from readsettings import select_settings
+
+os.environ["BLINKA_FT232H"] = "1"  # Setting Environmental Variable
+
+
 try:
     import board
     import digitalio
-except:
+except ImportError:
     print("no board module for ft232h")
 
 config = select_settings(verbose=False)
 CHHEATER = config["FT232H"]["Heater Output"]["Pin"]
-
 CHSYNC = config["FT232H"]["Sync Input"]["Pin"]
-
+DUTYCYCLE = config["Duty Cycle"]
 
 
 class HeaterContol(QtCore.QObject):
+    """
+    PWM for SSD of the membrane heater.
+    The PID value comes from worker.py thread.
+    """
+
     def __init__(self, app):
         super().__init__()
         self.app = app
         # range 0~1
         self.duty = 0
         self.abort = False
+        self.pin = None
 
-    # MARK: setter
-    def setOnLight(self, value: float):
+    # MARK: Duty setter
+    def set_ssd_duty(self, value: float):
+        """
+        Set SSD duty cycle, 0 by default
+        """
         self.duty = value
 
-    # MARK: - Methods
+    # MARK: PWD loop
     @QtCore.pyqtSlot()
     def work(self):
         self.__setThread()
-        #GPIO Setting : C0 will be output port.
+        # GPIO Setting : C0 will be output port.
         self.pin = pin_config(CHHEATER, "out")
 
         while not self.abort:
             if self.duty == 1:
                 self.pin.value = True
-                self.app.processEvents() 
-                time.sleep(0.01)
-            elif self.duty == 0:
+                self.app.processEvents()
+                time.sleep(DUTYCYCLE)
+            if self.duty == 0:
                 self.pin.value = False
                 self.app.processEvents()
-                time.sleep(0.01)
-            elif 0 < self.duty < 1:
+                time.sleep(DUTYCYCLE)
+            if 0 < self.duty < 1:
                 self.pin.value = True
-                time.sleep(0.01 * self.duty)
+                time.sleep(DUTYCYCLE * self.duty)
                 self.pin.value = False
-                time.sleep(0.01 * (1-self.duty))
+                time.sleep(DUTYCYCLE * (1 - self.duty))
                 self.app.processEvents()
         self.pin.value = False
-            
 
     def __setThread(self):
         self.threadName = QtCore.QThread.currentThread().objectName()
@@ -63,8 +76,9 @@ class HeaterContol(QtCore.QObject):
     def setAbort(self):
         self.abort = True
 
-class QmsSigSync():
-    
+
+class QmsSigSync:
+
     def __init__(self):
         # super().__init__()
         # self.app = app
@@ -72,40 +86,37 @@ class QmsSigSync():
         self.init_board()
 
     def init_board(self):
-        self.pin = pin_config(CHSYNC, "in")        
+        self.pin = pin_config(CHSYNC, "in")
 
     def get_sig(self):
         return self.pin.value
 
 
-
+# MARK: Pin Config
 def pin_config(pin_name, direction):
-    if pin_name == "c0":
-        pin = digitalio.DigitalInOut(board.C0)
-    elif pin_name == "c1":
-        pin = digitalio.DigitalInOut(board.C1)
-    elif pin_name == "c2":
-        pin = digitalio.DigitalInOut(board.C2)
-    elif pin_name == "c3":
-        pin = digitalio.DigitalInOut(board.C3)
-    elif pin_name == "c4":
-        pin = digitalio.DigitalInOut(board.C4)
-    elif pin_name == "c5":
-        pin = digitalio.DigitalInOut(board.C5)
-    elif pin_name == "c6":
-        pin = digitalio.DigitalInOut(board.C6)
-    elif pin_name == "c7":
-        pin = digitalio.DigitalInOut(board.C7)
-    elif pin_name == "d4":
-        pin = digitalio.DigitalInOut(board.D4)
-    elif pin_name == "d5":
-        pin = digitalio.DigitalInOut(board.D5)
-    elif pin_name == "d6":
-        pin = digitalio.DigitalInOut(board.D6)
-    elif pin_name == "d7":
-        pin = digitalio.DigitalInOut(board.D7)
-    else:
-        print("pin name is not correct")
+    """
+    Select pin and set input/output mode.
+    """
+    pin_map = {
+        "c0": board.C0,
+        "c1": board.C1,
+        "c2": board.C2,
+        "c3": board.C3,
+        "c4": board.C4,
+        "c5": board.C5,
+        "c6": board.C6,
+        "c7": board.C7,
+        "d4": board.D4,
+        "d5": board.D5,
+        "d6": board.D6,
+        "d7": board.D7,
+    }
+    pin_board = pin_map.get(pin_name)
+    if pin_board is None:
+        print("Pin name is not correct")
+        return None
+    pin = digitalio.DigitalInOut(pin_board)
+
     if direction == "out":
         pin.direction = digitalio.Direction.OUTPUT
     elif direction == "in":
@@ -113,7 +124,7 @@ def pin_config(pin_name, direction):
     else:
         print("direction is not correct")
     return pin
-        
+
 
 if __name__ == "__main__":
     app = QmsSigSync()

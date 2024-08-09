@@ -4,14 +4,17 @@ Worker threads
 Constants, such as channel for ADC, GPIO on RasPi, column names for dataframes,
 are specified in channels.py. Adjust values there to affect the whole of Contorlunit.
 """
+
 # from channels import *
 import time, datetime
 import numpy as np
 import pandas as pd
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5 import QtCore
+from simple_pid import PID
 
 from ft232h import HeaterContol
 from ni import Thermocouple
+
 
 # Converting raw signals to data
 
@@ -21,6 +24,7 @@ PRINTTHREADINFO = False
 STEP = 3
 
 
+# MARK: -Worker
 # must inherit QtCore.QObject in order to use 'connect'
 class Worker(QtCore.QObject):
     """
@@ -65,6 +69,7 @@ class Worker(QtCore.QObject):
         # print(f"Updated sampling to {sampling}")
 
 
+# MARK: -MAX6675
 class MAX6675(Worker):
 
     sigAbortHeater = QtCore.pyqtSignal()
@@ -102,10 +107,6 @@ class MAX6675(Worker):
         self.pi = pigpio.pi()
         self.__sumE = 0
         self.__exE = 0
-
-    def setPresetTemp(self, newTemp: int):
-        self.temperature_setpoint = newTemp
-        return
 
     @QtCore.pyqtSlot()
     def start(self):
@@ -156,6 +157,7 @@ class MAX6675(Worker):
         """
         self.data = self.data.iloc[0:0]
 
+    # MARK: update data
     def update_dataframe(self):
         """
         Append new reading to dataframe
@@ -164,7 +166,8 @@ class MAX6675(Worker):
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
         new_row = pd.DataFrame(
-            np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint]), columns=self.columns
+            np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint]),
+            columns=self.columns,
         )
         self.data = pd.concat([self.data, new_row], ignore_index=True)
 
@@ -174,6 +177,7 @@ class MAX6675(Worker):
         """
         self.average = self.data["T"].mean()
 
+    # MARK: acquisition loop
     @QtCore.pyqtSlot()
     def acquisition_loop(self):
         """
@@ -212,11 +216,11 @@ class MAX6675(Worker):
         self.thread = None
         self.sigDone.emit(self.sensor_name)
 
+    # MARK: PID MAX
     def temperature_control(self):
         """
         PID for MAX6675 class
         """
-        return # finding out which part of the code controls the relay
         e = self.temperature_setpoint - self.average
         integral = self.__sumE + e * self.sampling
         derivative = (e - self.__exE) / self.sampling
@@ -233,9 +237,9 @@ class MAX6675(Worker):
         if e >= 0:
             output = Kp * e + Ki * integral + Kd * derivative
             output = output * 0.0002
-            self.membrane_heater.setOnLight(max(output, 0))
+            self.membrane_heater.set_ssd_duty(max(output, 0))
         else:
-            self.membrane_heater.setOnLight(0)
+            self.membrane_heater.set_ssd_duty(0)
         self.__exE = e
         self.__sumE = integral
 
@@ -250,9 +254,9 @@ class MAX6675(Worker):
                 return int(d + 1)
         else:
             return steps
-        
 
 
+# MARK: -NI9211
 class NI9211(Worker):
     sigAbortHeater = QtCore.pyqtSignal()
     sigAbortThermocouple = QtCore.pyqtSignal()
@@ -265,13 +269,7 @@ class NI9211(Worker):
         self.config = config
         self.__abort = False
         self.qmssig = 0
-
-    @QtCore.pyqtSlot()
-    def abort(self):
-        message = "Worker thread {} aborting acquisition".format(self.sensor_name)
-        # self.send_message.emit(message)
-        print(message)
-        self.__abort = True
+        self.pid = None
 
     def setTempWorker(self, presetTemp: int):
         """
@@ -281,14 +279,10 @@ class NI9211(Worker):
         self.data = pd.DataFrame(columns=self.columns)
         self.temperature_setpoint = presetTemp
         self.sampling_rate = self.config["NI9211"]["Tc0"]["Sampling Rate"]
-        self.sampling = 1/ self.sampling_rate
+        self.sampling = 1 / self.sampling_rate
 
         self.__sumE = 0
         self.__exE = 0
-
-    def setPresetTemp(self, newTemp: int):
-        self.temperature_setpoint = newTemp
-        return
 
     @QtCore.pyqtSlot()
     def start(self):
@@ -318,7 +312,6 @@ class NI9211(Worker):
         self.thread_thermocouple.started.connect(self.thermocouple.work)
         self.sigAbortThermocouple.connect(self.thermocouple.setAbort)
         self.thread_thermocouple.start()
-        
 
     def read_thermocouple(self):
         """
@@ -339,6 +332,7 @@ class NI9211(Worker):
         """
         self.data = self.data.iloc[0:0]
 
+    # MARK: update data
     def update_dataframe(self):
         """
         Append new reading to dataframe
@@ -346,7 +340,19 @@ class NI9211(Worker):
         now = datetime.datetime.now()
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
-        new_row = pd.DataFrame(np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint,self.qmssig,self.cathodeBoxTemperature]), columns=self.columns)
+        new_row = pd.DataFrame(
+            np.atleast_2d(
+                [
+                    now,
+                    dSec,
+                    self.temperature,
+                    self.temperature_setpoint,
+                    self.qmssig,
+                    self.cathodeBoxTemperature,
+                ]
+            ),
+            columns=self.columns,
+        )
         self.data = pd.concat([self.data, new_row], ignore_index=True)
 
     def calculate_average(self):
@@ -355,6 +361,30 @@ class NI9211(Worker):
         """
         self.average = self.data["T"].mean()
 
+    def setPresetTemp(self, newTemp: int):
+        self.temperature_setpoint = newTemp
+        self.prep_pid()
+        return
+
+    # MARK: PID NI
+    def prep_pid(self):
+        """
+        Set PID parameters
+        """
+        self.pid = PID(0.01, 0, 0, setpoint=self.temperature_setpoint)
+        self.pid.output_limits = (0, 1)
+        self.pid.sample_time = self.sampling_rate
+
+    def update_ssr_duty(self):
+        """
+        update solid state relay duty
+        This calculates the duty with simple-pid package
+        and updates it
+        """
+        output = max(0, self.pid(self.temperature))
+        self.membrane_heater.set_ssd_duty(output)
+
+    # MARK: acquisition loop
     @QtCore.pyqtSlot()
     def acquisition_loop(self):
         """
@@ -362,6 +392,7 @@ class NI9211(Worker):
         """
         self.init_thermocouple()
         self.init_heater_control()
+        self.prep_pid()
 
         step = 0
 
@@ -370,75 +401,51 @@ class NI9211(Worker):
             self.read_thermocouple()
             self.update_dataframe()
 
+            # Update PWM with PID as fast as possible
+            self.update_ssr_duty()
+
+            # This is needed to reduce the data flow to the main.py
             if step % (STEP - 1) == 0 and step != 0:
                 self.calculate_average()
-                self.temperature_control()
                 self.send_processed_data_to_main_thread()
                 self.clear_datasets()
                 step = 0
             else:
                 step += 1
             self.__app.processEvents()
-        else:
-            # ABORTING
-            self.calculate_average()
-            self.send_processed_data_to_main_thread()
-            self.sigAbortHeater.emit()
-            self.sigAbortThermocouple.emit()
-            self.__sumE = 0
-            
 
-            self.thread_thermocouple.quit()
-            self.thread_heater.quit()
-            self.thread_thermocouple.wait()
-            self.thread_heater.wait()
+        self.cleanup_to_abort()
 
+    def cleanup_to_abort(self):
+        """
+        Shut down control, quit threads, reset data
+        """
+        self.membrane_heater.set_ssd_duty(0)
+        self.calculate_average()
+        self.send_processed_data_to_main_thread()
+        self.sigAbortHeater.emit()
+        self.sigAbortThermocouple.emit()
+        self.pid = None
+
+        self.thread_thermocouple.quit()
+        self.thread_heater.quit()
+        self.thread_thermocouple.wait()
+        self.thread_heater.wait()
 
         self.thread_heater = None
         self.thread_thermocouple = None
         self.sigDone.emit(self.sensor_name)
 
-    def temperature_control(self):
-        """ NI class PID """
-        # return # does this part actually work? It does
-        e = self.temperature_setpoint - self.temperature
-        integral = self.__sumE + e / self.sampling_rate
-        derivative = (e - self.__exE) * self.sampling_rate
-
-        # TODO Adjustment
-        Kp = 3.5
-        Ki = 0.06
-        Kd = 0
-
-        # TODO Adjustment
-        if integral < -0.5:
-            integral = 0
-
-        # This part ignored Kp, Ki, Kd
-        # if e > 20: self.membrane_heater.duty = 1
-        # This was required because the ouptupt is not calculated properly.
-        # The PID formula should get us max (1) when required. Otherwise it's not properly calibrated
-        
-
-        if e >= 0:
-            output = Kp * e + Ki * integral + Kd * derivative
-            output = output * 0.0001 # Reduce duty cicle, but why? PID should give the good result, no?
-            self.membrane_heater.setOnLight(max(output, 0))
-        else:
-            self.membrane_heater.setOnLight(0)
-
+    @QtCore.pyqtSlot()
+    def abort(self):
         """
-        Duty means for this fraction of 0.01s relay is turned on.
-        self.pin.value = True
-        time.sleep(0.01 * self.duty)
-        self.pin.value = False
-        time.sleep(0.01 * (1-self.duty))
+        Sets the flag self.__abort to True to exit acquisition while loop
         """
+        message = "Worker thread {} aborting acquisition".format(self.sensor_name)
+        # self.send_message.emit(message)
+        print(message)
+        self.__abort = True
 
-        self.__exE = e
-        self.__sumE = integral
-        pass
-    
 
 if __name__ == "__main__":
     pass

@@ -43,11 +43,17 @@ class Thermocouple(QtCore.QObject):
     def work(self):
         self.__setThread()
         with nidaqmx.Task() as task:
-            task.ai_channels.add_ai_thrmcpl_chan("cDAQ1Mod1/ai0:1",thermocouple_type = nidaqmx.constants.ThermocoupleType(self.tc_type),cjc_source=nidaqmx.constants.CJCSource(10200))
+            task.ai_channels.add_ai_thrmcpl_chan(
+                "cDAQ1Mod1/ai0:1",
+                thermocouple_type=nidaqmx.constants.ThermocoupleType(self.tc_type),
+                cjc_source=nidaqmx.constants.CJCSource(10200),
+            )
             task.timing.cfg_samp_clk_timing(rate=1000)
             while not self.abort:
                 self.temperature = task.read(number_of_samples_per_channel=1)[0][0]
-                self.cathodeBoxTemperature = task.read(number_of_samples_per_channel=1)[1][0]
+                self.cathodeBoxTemperature = task.read(number_of_samples_per_channel=1)[
+                    1
+                ][0]
                 self.measuring_flag = True
                 self.app.processEvents()
 
@@ -59,6 +65,6 @@ class Thermocouple(QtCore.QObject):
     def setAbort(self):
         self.abort = True
 
-        
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     Thermocouple()

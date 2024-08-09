@@ -3,10 +3,9 @@ import os
 from os.path import join, expanduser
 
 
-
 def load_settings(path_to_file):
     """
-    UPDATE: change sattings from a csv file to 
+    UPDATE: change sattings from a csv file to
     fully defined settings in a yaml file.
     """
     import yaml
@@ -20,10 +19,12 @@ def load_settings(path_to_file):
 
 def select_settings(path_to_file="settings.yml", verbose=False):
     """
-    Check if there is local settings file and 
+    Check if there is local settings file and
     if its version is same as current, load local one.
     """
-    local_settings = os.path.join(os.path.expanduser("~"), ".controlunit", "settings.yml")
+    local_settings = os.path.join(
+        os.path.expanduser("~"), ".controlunit", "settings.yml"
+    )
 
     try:
         local_config = load_settings(local_settings)
@@ -51,7 +52,6 @@ def init_configuration(settings="settings.yml", verbose=False):
     config = select_settings(settings, verbose=verbose)
     config["Data Folder"] = init_datafolder(config)
     config["Log File Path"] = check_logfile(config)
-
 
     print("controlunit configuration loaded successfully.")
     return config
@@ -91,4 +91,7 @@ def init_datafolder(config):
 
 
 if __name__ == "__main__":
-    print(load_settings())
+    try:
+        print(load_settings("settings.yml"))
+    finally:
+        pass

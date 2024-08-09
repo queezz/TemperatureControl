@@ -17,7 +17,6 @@ Temperature Columns:
   - "Qms signal"
   - "Cathode Box T"
 
-
 # ================================================
 #
 # 4 channel 24-Bit Temperature Input Module : NI-9211
@@ -53,10 +52,12 @@ Sampling Time: 0.1
 
 Max Temperature: 1200
 
+Duty Cycle: 0.01
+
 FT232H:
   Heater Output:
     Pin: c0
     Description: "Membrane Heater Output"
   Sync Input:
     Pin: c1
-    Description: "Signal Input for time synchronization with Raspberry Pi" 
+    Description: "Signal Input for time synchronization with Raspberry Pi"
