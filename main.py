@@ -362,7 +362,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.cathodeBoxDock.update_displayed_temperatures(
             f"{self.currentvalues['Cathode Box T']:.0f}"
         )
-        self.controlDock.gaugeT.update_value(self.currentvalues["T"])
+        self.tGauge.gaugeT.update_value(self.currentvalues["T"])
 
     def calculate_skip_points(self, l, noskip=5000):
         return 1 if l < noskip else l // noskip + 1
@@ -404,6 +404,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.tempcontrolDock.set_heating_goal(self.__temp, f"{temp_now:.0f}")
         if self.tWorker is not None:
             self.tWorker.setPresetTemp(self.__temp)
+            self.__app.processEvents()
 
     # MARK: Aborting
     @QtCore.pyqtSlot(str)

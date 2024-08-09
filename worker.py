@@ -371,9 +371,9 @@ class NI9211(Worker):
         """
         Set PID parameters
         """
-        self.pid = PID(0.01, 0, 0, setpoint=self.temperature_setpoint)
+        self.pid = PID(0.06, 1e-5, 1e-1, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
-        self.pid.sample_time = self.sampling_rate
+        self.pid.sample_time = self.sampling_rate*0.8
 
     def update_ssr_duty(self):
         """
@@ -381,8 +381,9 @@ class NI9211(Worker):
         This calculates the duty with simple-pid package
         and updates it
         """
-        output = max(0, self.pid(self.temperature))
+        output = max(0, self.pid(self.temperature))        
         self.membrane_heater.set_ssd_duty(output)
+        return output
 
     # MARK: acquisition loop
     @QtCore.pyqtSlot()
@@ -402,10 +403,12 @@ class NI9211(Worker):
             self.update_dataframe()
 
             # Update PWM with PID as fast as possible
-            self.update_ssr_duty()
+            pidoutput = self.update_ssr_duty()
 
             # This is needed to reduce the data flow to the main.py
             if step % (STEP - 1) == 0 and step != 0:
+                p,i,d = self.pid.components
+                print(f'p {p:.0e} i {i:.0e} d {d:.0e}')
                 self.calculate_average()
                 self.send_processed_data_to_main_thread()
                 self.clear_datasets()
