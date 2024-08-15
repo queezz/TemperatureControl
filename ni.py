@@ -1,19 +1,46 @@
-# Description: This program is for NI-DAQ (NI-9211) communication.
+"""
+This program is for NI-DAQ (NI-9211) communication.
+"""
+
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
 import datetime
 from PyQt5 import QtCore
 
+RED = "\033[1;31m"
+GREEN = "\033[1;32m"
+BLUE = "\033[1;34m"
+RESET = "\033[0m"
+
+ISUMMY = False
 
 try:
     import nidaqmx
-except:
-    print("no nidaqmx module for ni.py")
+except ModuleNotFoundError as e:
+    print(RED + "ni.py Error: " + RESET + f"{e}")
+    from dummy import nidaqmx
+
+    print(
+        BLUE
+        + "ni.py WARNING:"
+        + RESET
+        + " importing"
+        + BLUE
+        + " DUMMY"
+        + RESET
+        + " 'dummy.nidaqmx' for tests"
+    )
+    ISDUMMY = True
 
 
 ### Write down fundamental program to communicate with NI-DAQ (NI-9211)
 class Thermocouple(QtCore.QObject):
+    """
+    NI-DAQ (NI-9211) Thermocouples
+    """
+
+    ISDUMMY = ISDUMMY
 
     def __init__(self, app):
         super().__init__()

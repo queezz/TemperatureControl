@@ -1,5 +1,10 @@
-import sys, datetime, os
-import numpy as np
+"""
+Main loop of the app
+"""
+
+import sys
+import datetime
+import os
 import pandas as pd
 from PyQt5 import QtGui, QtCore, QtWidgets
 
@@ -11,11 +16,11 @@ from ft232h import QmsSigSync
 import readsettings
 from striphtmltags import strip_tags
 
-import time
-
 
 # must inherit QtCore.QObject in order to use 'connect'
 class MainWidget(QtCore.QObject, UIWindow):
+    """"""
+
     DEFAULT_TEMPERATURE = 0
     DEFALT_VOLTAGE = 0
     STEP = 3
@@ -27,14 +32,14 @@ class MainWidget(QtCore.QObject, UIWindow):
         super(self.__class__, self).__init__()
         self.__app = app
         self.connections()
-        self.tempcontrolDock.set_heating_goal(self.DEFAULT_TEMPERATURE, "---")
-        self.cathodeBoxDock.update_displayed_temperatures("---")
+        self.temperature_control_dock.set_heating_goal(self.DEFAULT_TEMPERATURE, "---")
+        self.cathode_box_dock.update_displayed_temperatures("---")
 
         QtCore.QThread.currentThread().setObjectName("main")
 
         self.__workers_done = 0
-        self.__threads = []
-        self.__temp = self.DEFAULT_TEMPERATURE
+        self.threads = []
+        self.temperature_setpoint = self.DEFAULT_TEMPERATURE
 
         self.trigData = None
         self.tData = None
@@ -53,15 +58,18 @@ class MainWidget(QtCore.QObject, UIWindow):
             "trigger": {"color": "#edbc34", "width": 2},
         }
 
-        self.valueTPlot = self.graph.tempPl.plot(pen=self.pens["T"])
-        self.graph.tempPl.setYRange(0, 320, 0)
+        self.temperatuere_curve_data = self.graph.temperature_plot.plot(
+            pen=self.pens["T"]
+        )
+        self.graph.temperature_plot.setYRange(0, 320, 0)
+        self.graph.pid_plot.setXLink(self.graph.temperature_plot)
 
-        self.tWorker = None
+        self.temperature_worker = None
 
         self.qmssigreader = QmsSigSync()
 
         self.qmssig = False
-        self.controlDock.explamp.setValue(self.qmssig)
+        self.control_dock.explamp.setValue(self.qmssig)
 
         self.update_plot_timewindow()
 
@@ -70,23 +78,29 @@ class MainWidget(QtCore.QObject, UIWindow):
 
     # MARK: connections
     def connections(self):
-        self.controlDock.scaleBtn.currentIndexChanged.connect(
+        """
+        Defines GUI to logic connections
+        """
+        self.control_dock.scaleBtn.currentIndexChanged.connect(
             self.update_plot_timewindow
         )
 
-        self.tempcontrolDock.registerBtn.clicked.connect(self.set_heater_goal)
+        self.temperature_control_dock.set_button.clicked.connect(self.set_heater_goal)
 
-        self.controlDock.FullNormSW.clicked.connect(self.fulltonormal)
-        self.controlDock.OnOffSW.clicked.connect(self.__onoff)
-        self.controlDock.quitBtn.clicked.connect(self.__quit)
+        self.control_dock.fullscreen_toggle.clicked.connect(self.fulltonormal)
+        self.control_dock.on_off_toggle.clicked.connect(self.__onoff)
+        self.control_dock.quitBtn.clicked.connect(self.__quit)
 
         # Toggle plots for Current, Temperature, and Pressure
-        self.scaleDock.togT.clicked.connect(self.toggle_plots)
+        self.scale_dock.temperature_plot_toggle.clicked.connect(self.toggle_plots)
+        self.scale_dock.pid_plot_toggle.clicked.connect(self.toggle_plots)
 
-        self.scaleDock.Tmax.valueChanged.connect(self.__updateTScale)
+        self.scale_dock.t_max.valueChanged.connect(self.__updateTScale)
 
-        self.scaleDock.autoscale.clicked.connect(self.__auto_or_levels)
-        self.SettingsDock.setSamplingBtn.clicked.connect(self.__set_sampling)
+        self.scale_dock.autoscale.clicked.connect(self.__auto_or_levels)
+        self.settings_dock.sampling_button.clicked.connect(self.set_sampling)
+
+        self.pid_tuning_dock.set_button.clicked.connect(self.set_pid_coefficients)
 
     # MARK: UI
     def __quit(self):
@@ -97,13 +111,13 @@ class MainWidget(QtCore.QObject, UIWindow):
         """
         Start and stop worker threads
         """
-        if self.controlDock.OnOffSW.isChecked():
+        if self.control_dock.on_off_toggle.isChecked():
             self.prep_threads()
-            self.controlDock.quitBtn.setEnabled(False)
+            self.control_dock.quitBtn.setEnabled(False)
         else:
             quit_msg = "Are you sure you want to stop data acquisition?"
             reply = QtWidgets.QMessageBox.warning(
-                self.MainWindow,
+                self.main_window,
                 "Message",
                 quit_msg,
                 QtWidgets.QMessageBox.Yes,
@@ -111,9 +125,9 @@ class MainWidget(QtCore.QObject, UIWindow):
             )
             if reply == QtWidgets.QMessageBox.Yes:
                 self.abort_all_threads()
-                self.controlDock.quitBtn.setEnabled(True)
+                self.control_dock.quitBtn.setEnabled(True)
             else:
-                self.controlDock.OnOffSW.setChecked(True)
+                self.control_dock.on_off_toggle.setChecked(True)
 
     def toggle_plots(self):
         """
@@ -135,22 +149,28 @@ class MainWidget(QtCore.QObject, UIWindow):
                     pass
 
         items = {
-            "T": [self.scaleDock.togT, self.graph.tempPl, 0, 0],
+            "pid": [self.scale_dock.pid_plot_toggle, self.graph.pid_plot, 0, 0],
+            "T": [
+                self.scale_dock.temperature_plot_toggle,
+                self.graph.temperature_plot,
+                1,
+                0,
+            ],
         }
 
-        [toggleplot(*items[jj]) for jj in ["T"]]
+        [toggleplot(*items[jj]) for jj in ["T", "pid"]]
 
     @QtCore.pyqtSlot()
-    def __set_sampling(self):
+    def set_sampling(self):
         """Set sampling time for all threads"""
-        if not len(self.__threads):
+        if not len(self.threads):
             return
-        txt = self.SettingsDock.samplingCb.currentText()
+        txt = self.settings_dock.sampling_checkbox.currentText()
         value = float(txt.split(" ")[0])
         self.sampling = value
         self.update_plot_timewindow()
-        if self.tWorker is not None:
-            self.tWorker.setSampling(value)
+        if self.temperature_worker is not None:
+            self.temperature_worker.setSampling(value)
             self.log_message(f"Temperature sampling set to {value}")
 
     # MARK: plotting
@@ -159,8 +179,8 @@ class MainWidget(QtCore.QObject, UIWindow):
         adjust time window for data plots
         """
         # index = self.controlDock.scaleBtn.currentIndex()
-        txt = self.controlDock.scaleBtn.currentText()
-        val = self.controlDock.sampling_windows[txt]
+        txt = self.control_dock.scaleBtn.currentText()
+        val = self.control_dock.sampling_windows[txt]
         self.time_window = val
         # self.log_message(f"Timewindow = {val}")
         try:
@@ -171,8 +191,8 @@ class MainWidget(QtCore.QObject, UIWindow):
 
     def __updateTScale(self):
         """Updated plot limits for the Temperature viewgraph"""
-        tmax = self.scaleDock.Tmax.value()
-        self.graph.tempPl.setYRange(0, tmax, 0)
+        tmax = self.scale_dock.t_max.value()
+        self.graph.temperature_plot.setYRange(0, tmax, 0)
 
     def __updateScales(self):
         """Update all scales according to spinboxes"""
@@ -181,26 +201,26 @@ class MainWidget(QtCore.QObject, UIWindow):
     def __autoscale(self):
         """Set all plots to autoscale"""
         # enableAutoRange
-        plots = [self.graph.tempPl]
+        plots = [self.graph.temperature_plot]
 
         # [i.autoRange() for i in plots]
         [i.enableAutoRange() for i in plots]
 
     def __auto_or_levels(self):
         """Change plot scales from full auto to Y axis from settings"""
-        if self.scaleDock.autoscale.isChecked():
+        if self.scale_dock.autoscale.isChecked():
             self.__autoscale()
         else:
             self.__updateScales()
 
     def fulltonormal(self):
         """Change from full screen to normal view on click"""
-        if self.controlDock.FullNormSW.isChecked():
-            self.MainWindow.showFullScreen()
-            self.controlDock.setStretch(*(10, 300))  # minimize control dock width
+        if self.control_dock.fullscreen_toggle.isChecked():
+            self.main_window.showFullScreen()
+            self.control_dock.setStretch(*(10, 300))  # minimize control dock width
         else:
-            self.MainWindow.showNormal()
-            self.controlDock.setStretch(*(10, 300))  # minimize control dock width
+            self.main_window.showNormal()
+            self.control_dock.setStretch(*(10, 300))  # minimize control dock width
 
     def update_plots(self, sensor_name):
         """"""
@@ -209,7 +229,7 @@ class MainWidget(QtCore.QObject, UIWindow):
             time = df["time"].values.astype(float)
             temperature = df["T"].values.astype(float)
             skip = self.calculate_skip_points(time.shape[0])
-            self.valueTPlot.setData(time[::skip], temperature[::skip])
+            self.temperatuere_curve_data.setData(time[::skip], temperature[::skip])
 
     # MARK: prep threads
     def prep_threads(self):
@@ -231,11 +251,11 @@ class MainWidget(QtCore.QObject, UIWindow):
 
         self.__workers_done = 0
 
-        for thread, worker in self.__threads:
+        for thread, worker in self.threads:
             thread.quit()
             thread.wait()
 
-        self.__threads = []
+        self.threads = []
 
         now = datetime.datetime.now()
         threads = {}
@@ -244,11 +264,11 @@ class MainWidget(QtCore.QObject, UIWindow):
         sensor_name = "NI9211"
         threads[sensor_name] = QtCore.QThread()
         threads[sensor_name].setObjectName(f"{sensor_name}")
-        self.tWorker = NI9211(sensor_name, self.__app, now, self.config)
-        self.tWorker.setTempWorker(self.__temp)
-        self.tWorker.qmssig = int(self.qmssigreader.get_sig())
+        self.temperature_worker = NI9211(sensor_name, self.__app, now, self.config)
+        self.temperature_worker.set_temp_worker(self.temperature_setpoint)
+        self.temperature_worker.qmssig = int(self.qmssigreader.get_sig())
 
-        workers = {worker.sensor_name: worker for worker in [self.tWorker]}
+        workers = {worker.sensor_name: worker for worker in [self.temperature_worker]}
         self.sensor_names = list(workers)
 
         [self.start_thread(workers[s], threads[s]) for s in self.sensor_names]
@@ -265,7 +285,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         - sets initial values for all parameters (zeros)
         """
 
-        self.__threads.append((thread, worker))
+        self.threads.append((thread, worker))
         worker.moveToThread(thread)
         self.connect_worker_signals(worker)
 
@@ -273,9 +293,10 @@ class MainWidget(QtCore.QObject, UIWindow):
         if worker.sensor_name == "NI9211":
             self.create_file(worker.sensor_name)
             self.log_message(
-                f"<font size=4 color='blue'>{worker.sensor_name}</font> savepath:<br> {self.savepaths[worker.sensor_name]}",
+                f"<font size=4 color='blue'>{worker.sensor_name}</font>"
+                + f" savepath:<br> {self.savepaths[worker.sensor_name]}",
             )
-
+            worker.signal_send_pid.connect(self.update_pid_components)
         thread.started.connect(worker.start)
         thread.start()
 
@@ -284,7 +305,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         Connects worker signals to the main thread
         """
         worker.send_step_data.connect(self.on_worker_step)
-        worker.sigDone.connect(self.on_worker_done)
+        worker.signal_done.connect(self.on_worker_done)
         worker.send_message.connect(self.log_message)
         self.sigAbortWorkers.connect(worker.abort)
 
@@ -356,13 +377,13 @@ class MainWidget(QtCore.QObject, UIWindow):
 
         # TODO: updated dislpayed valuves from dataframes
 
-        self.tempcontrolDock.update_displayed_temperatures(
-            self.__temp, f"{self.currentvalues['T']:.0f}"
+        self.temperature_control_dock.update_displayed_temperatures(
+            self.temperature_setpoint, f"{self.currentvalues['T']:.0f}"
         )
-        self.cathodeBoxDock.update_displayed_temperatures(
+        self.cathode_box_dock.update_displayed_temperatures(
             f"{self.currentvalues['Cathode Box T']:.0f}"
         )
-        self.tGauge.gaugeT.update_value(self.currentvalues["T"])
+        self.temperature_gauge_dock.gaugeT.update_value(self.currentvalues["T"])
 
     def calculate_skip_points(self, l, noskip=5000):
         return 1 if l < noskip else l // noskip + 1
@@ -395,15 +416,40 @@ class MainWidget(QtCore.QObject, UIWindow):
         data = self.newdata[sensor_name]
         data.to_csv(savepath, mode="a", header=False, index=False)
 
+    # MARK: PID tune
+    @QtCore.pyqtSlot()
+    def set_pid_coefficients(self):
+        """update p, i, and d"""
+        tags = ["p", "i", "d"]
+
+        def calculate_spinbox_value(tag):
+            significand = self.pid_tuning_dock.pid_spinboxes[tag]["significand"].value()
+            exponent = self.pid_tuning_dock.pid_spinboxes[tag]["exponent"].value()
+            return significand * 10**exponent
+
+        pid_coffecients = {tag: calculate_spinbox_value(tag) for tag in tags}
+
+        if self.temperature_worker is not None:
+            self.temperature_worker.update_pid_coefficients(
+                list(pid_coffecients.values())
+            )
+            self.__app.processEvents()
+
+    def update_pid_components(self, pid_components):
+        """update pid components browser"""
+        self.pid_tuning_dock.update_display(*pid_components)
+
     # MARK: Set Heater
     @QtCore.pyqtSlot()
     def set_heater_goal(self):
-        value = self.tempcontrolDock.temperatureSB.value()
-        self.__temp = value
+        value = self.temperature_control_dock.temperatureSB.value()
+        self.temperature_setpoint = value
         temp_now = self.currentvalues["T"]
-        self.tempcontrolDock.set_heating_goal(self.__temp, f"{temp_now:.0f}")
-        if self.tWorker is not None:
-            self.tWorker.setPresetTemp(self.__temp)
+        self.temperature_control_dock.set_heating_goal(
+            self.temperature_setpoint, f"{temp_now:.0f}"
+        )
+        if self.temperature_worker is not None:
+            self.temperature_worker.set_preset_temp(self.temperature_setpoint)
             self.__app.processEvents()
 
     # MARK: Aborting
@@ -421,11 +467,11 @@ class MainWidget(QtCore.QObject, UIWindow):
     @QtCore.pyqtSlot()
     def abort_all_threads(self):
         self.sigAbortWorkers.emit()
-        for thread, worker in self.__threads:
+        for thread, worker in self.threads:
             thread.quit()
             thread.wait()
 
-        self.__threads = []
+        self.threads = []
 
     def reset_data(self, sensor_name):
         self.datadict[sensor_name] = self.datadict[sensor_name].iloc[0:0]
@@ -449,14 +495,14 @@ class MainWidget(QtCore.QObject, UIWindow):
         time_stamp = self.generate_time_stamp()
         self.log_to_file(strip_tags(message))
         new_line = f"<{htmltag}>{time_stamp}: {message}</{htmltag}>"
-        if not self.logDock.log.toPlainText():
-            self.logDock.log.setHtml(new_line)
+        if not self.log_dock.log.toPlainText():
+            self.log_dock.log.setHtml(new_line)
         else:
-            current_text = self.logDock.log.toHtml()
+            current_text = self.log_dock.log.toHtml()
             current_text += new_line
-            self.logDock.log.setHtml(current_text)
+            self.log_dock.log.setHtml(current_text)
 
-        self.logDock.log.moveCursor(self.logDock.log.textCursor().End)
+        self.log_dock.log.moveCursor(self.log_dock.log.textCursor().End)
         # self.logDock.log.append(f"<{htmltag}>{nowstamp}: {message}</{htmltag}>")
 
 
@@ -470,7 +516,9 @@ def main():
 
 
 if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    widget = MainWidget(app)
+    import sys
 
+    app = QtWidgets.QApplication([])
+    app.setWindowIcon(QtGui.QIcon("./icons/temperature.png"))
+    widget = MainWidget(app)
     sys.exit(app.exec_())

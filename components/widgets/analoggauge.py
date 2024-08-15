@@ -80,7 +80,7 @@ except:
         # QtCore -> Qt.NoPen ,QTime, QTimer, QPoint, QPointF, QRect, QSize
 
         used_Qt_Version = 5
-        print("imported Qt5 @ analoggaugewidget.py")
+        # print("imported Qt5 @ analoggaugewidget.py")
     except Exception as e:
         print("Error Import Qt 4 & 5 @ analoggaugewidget.py", f"{e}")
         exit()

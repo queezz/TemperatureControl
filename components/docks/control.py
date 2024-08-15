@@ -26,9 +26,9 @@ class ControlDock(Dock):
         [self.scaleBtn.addItem(i) for i in items]
         self.sampling_windows = {i: j for i, j in zip(items, sizes)}
 
-        self.FullNormSW = MySwitch()
-        self.OnOffSW = OnOffSwitch()
-        self.OnOffSW.setFont(QtGui.QFont("serif", 16))
+        self.fullscreen_toggle = MySwitch()
+        self.on_off_toggle = OnOffSwitch()
+        self.on_off_toggle.setFont(QtGui.QFont("serif", 16))
 
         self.explamp = QLed(self, onColour=QLed.Red, shape=QLed.Circle)
         self.explamp.setValue(False)
@@ -38,11 +38,11 @@ class ControlDock(Dock):
     def __setLayout(self):
         self.addWidget(self.widget)
 
-        self.widget.addWidget(self.OnOffSW, 0, 0)
+        self.widget.addWidget(self.on_off_toggle, 0, 0)
         self.widget.addWidget(self.explamp, 0, 1)
         self.widget.addWidget(self.quitBtn, 0, 2)
 
-        self.widget.addWidget(self.FullNormSW, 1, 0)
+        self.widget.addWidget(self.fullscreen_toggle, 1, 0)
         self.widget.addWidget(self.scaleBtn, 1, 1, 1, 2)
 
         self.verticalSpacer = QtWidgets.QSpacerItem(

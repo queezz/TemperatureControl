@@ -10,30 +10,35 @@ class PlotScaleDock(Dock):
         self.widget = pg.LayoutWidget()
 
         self.autoscale = changeScale()
-        self.togT = ToggleTemperaturePlot()
-        [i.setChecked(True) for i in [self.togT]]
-        self.Tmax = QtWidgets.QSpinBox()
-        self.Tmax.setMinimum(50)
-        self.Tmax.setMaximum(1000)
-        self.Tmax.setMinimumSize(QtCore.QSize(60, 60))
-        self.Tmax.setSingleStep(50)
+        self.temperature_plot_toggle = ToggleTemperaturePlot()
+        self.pid_plot_toggle = TogglePIDPlot()
+        [
+            i.setChecked(True)
+            for i in [self.temperature_plot_toggle, self.pid_plot_toggle]
+        ]
+        self.t_max = QtWidgets.QSpinBox()
+        self.t_max.setMinimum(50)
+        self.t_max.setMaximum(1000)
+        self.t_max.setMinimumSize(QtCore.QSize(60, 60))
+        self.t_max.setSingleStep(50)
 
         [
             i.setStyleSheet(
-                "QSpinBox::up-button   { width: 50px; }\n"
-                "QSpinBox::down-button { width: 50px;}\n"
-                "QSpinBox {font: 26pt;}"
+                "QSpinBox::up-button   { width: 30px; }\n"
+                "QSpinBox::down-button { width: 30px;}\n"
+                "QSpinBox {font: 20pt;}"
             )
-            for i in [self.Tmax]
+            for i in [self.t_max]
         ]
 
         self.__setLayout()
 
     def __setLayout(self):
         self.addWidget(self.widget)
-        self.widget.addWidget(self.Tmax, 0, 0)
-        self.widget.addWidget(self.togT, 0, 1)
-        self.widget.addWidget(self.autoscale, 0, 2)
+        self.widget.addWidget(self.t_max, 0, 0)
+        self.widget.addWidget(self.temperature_plot_toggle, 0, 1)
+        self.widget.addWidget(self.pid_plot_toggle, 0, 2)
+        self.widget.addWidget(self.autoscale, 0, 3)
 
         self.verticalSpacer = QtWidgets.QSpacerItem(
             0, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding

@@ -33,7 +33,7 @@ class Worker(QtCore.QObject):
     """
 
     send_step_data = QtCore.pyqtSignal(list)
-    sigDone = QtCore.pyqtSignal(str)
+    signal_done = QtCore.pyqtSignal(str)
     send_message = QtCore.pyqtSignal(str)
 
     def __init__(self, sensor_name, app, startTime, config):
@@ -72,7 +72,7 @@ class Worker(QtCore.QObject):
 # MARK: -MAX6675
 class MAX6675(Worker):
 
-    sigAbortHeater = QtCore.pyqtSignal()
+    signal_abort_heater = QtCore.pyqtSignal()
 
     def __init__(self, sensor_name, app, startTime, config):
         super().__init__(sensor_name, app, startTime, config)
@@ -121,7 +121,7 @@ class MAX6675(Worker):
         self.thread.setObjectName("heater current")
         self.membrane_heater.moveToThread(self.thread)
         self.thread.started.connect(self.membrane_heater.work)
-        self.sigAbortHeater.connect(self.membrane_heater.setAbort)
+        self.signal_abort_heater.connect(self.membrane_heater.setAbort)
         self.thread.start()
 
     def init_thermocouple(self):
@@ -169,7 +169,16 @@ class MAX6675(Worker):
             np.atleast_2d([now, dSec, self.temperature, self.temperature_setpoint]),
             columns=self.columns,
         )
-        self.data = pd.concat([self.data, new_row], ignore_index=True)
+
+        # self.data = pd.concat([self.data, new_row], ignore_index=True)
+        # Fixing pandas future warning
+        non_empty_columns = new_row.dropna(axis=1, how="all").columns
+        # Ensure we also consider only those columns that exist in the original DataFrame for consistency
+        common_columns = self.data.columns.intersection(non_empty_columns)
+        # Step 2: Concatenate while focusing on these identified columns
+        self.data = pd.concat(
+            [self.data[common_columns], new_row[common_columns]], ignore_index=True
+        )
 
     def calculate_average(self):
         """
@@ -202,19 +211,24 @@ class MAX6675(Worker):
             else:
                 step += 1
             self.__app.processEvents()
-        else:
-            # ABORTING
-            self.calculate_average()
-            self.send_processed_data_to_main_thread()
-            self.sigAbortHeater.emit()
-            self.__sumE = 0
-            self.thread.quit()
-            self.thread.wait()
-            self.pi.spi_close(self.sensor)
-            self.pi.stop()
+
+        self.cleanup_to_abort()
+
+    def cleanup_to_abort(self):
+        """
+        Shut down control, quit threads, reset data
+        """
+        self.calculate_average()
+        self.send_processed_data_to_main_thread()
+        self.signal_abort_heater.emit()
+        self.__sumE = 0
+        self.thread.quit()
+        self.thread.wait()
+        self.pi.spi_close(self.sensor)
+        self.pi.stop()
 
         self.thread = None
-        self.sigDone.emit(self.sensor_name)
+        self.signal_done.emit(self.sensor_name)
 
     # MARK: PID MAX
     def temperature_control(self):
@@ -258,8 +272,9 @@ class MAX6675(Worker):
 
 # MARK: -NI9211
 class NI9211(Worker):
-    sigAbortHeater = QtCore.pyqtSignal()
-    sigAbortThermocouple = QtCore.pyqtSignal()
+    signal_abort_heater = QtCore.pyqtSignal()
+    signal_abort_thermocouple = QtCore.pyqtSignal()
+    signal_send_pid = QtCore.pyqtSignal(tuple)
 
     def __init__(self, sensor_name, app, startTime, config):
         super().__init__(sensor_name, app, startTime, config)
@@ -271,18 +286,19 @@ class NI9211(Worker):
         self.qmssig = 0
         self.pid = None
 
-    def setTempWorker(self, presetTemp: int):
-        """
-        needs pigpio daemon
-        """
+        self.temperature_setpoint = None
         self.columns = self.config["Temperature Columns"]
-        self.data = pd.DataFrame(columns=self.columns)
-        self.temperature_setpoint = presetTemp
+        self.data = None
+        self.temperature_setpoint = 0
         self.sampling_rate = self.config["NI9211"]["Tc0"]["Sampling Rate"]
         self.sampling = 1 / self.sampling_rate
 
-        self.__sumE = 0
-        self.__exE = 0
+    def set_temp_worker(self, setpoint: int):
+        """
+        needs pigpio daemon
+        """
+        self.data = pd.DataFrame(columns=self.columns)
+        self.temperature_setpoint = setpoint
 
     @QtCore.pyqtSlot()
     def start(self):
@@ -297,8 +313,14 @@ class NI9211(Worker):
         self.thread_heater.setObjectName("heater current")
         self.membrane_heater.moveToThread(self.thread_heater)
         self.thread_heater.started.connect(self.membrane_heater.work)
-        self.sigAbortHeater.connect(self.membrane_heater.setAbort)
+        self.signal_abort_heater.connect(self.membrane_heater.setAbort)
         self.thread_heater.start()
+
+        if self.membrane_heater.ISDUMMY:
+            self.send_message.emit(
+                f"<font size=4 color='blue'>{self.sensor_name}</font>"
+                + f" <font color='red'>DUMMY</font> signal",
+            )
 
     def init_thermocouple(self):
         """
@@ -310,7 +332,7 @@ class NI9211(Worker):
         self.thread_thermocouple.setObjectName("thermocouple")
         self.thermocouple.moveToThread(self.thread_thermocouple)
         self.thread_thermocouple.started.connect(self.thermocouple.work)
-        self.sigAbortThermocouple.connect(self.thermocouple.setAbort)
+        self.signal_abort_thermocouple.connect(self.thermocouple.setAbort)
         self.thread_thermocouple.start()
 
     def read_thermocouple(self):
@@ -353,7 +375,13 @@ class NI9211(Worker):
             ),
             columns=self.columns,
         )
-        self.data = pd.concat([self.data, new_row], ignore_index=True)
+
+        # This gives FutureWarning
+        # self.data = pd.concat([self.data, new_row], ignore_index=True)
+        # adjusting the dtypes to remove it:
+        self.data = pd.concat(
+            [self.data.astype(new_row.dtypes), new_row.astype(self.data.dtypes)]
+        )
 
     def calculate_average(self):
         """
@@ -362,18 +390,26 @@ class NI9211(Worker):
         self.average = self.data["T"].mean()
 
     # MARK: PID NI
-    def setPresetTemp(self, newTemp: int):
+    def set_preset_temp(self, newTemp: int):
         self.temperature_setpoint = newTemp
         self.pid.setpoint = self.temperature_setpoint
         return
+
+    def update_pid_coefficients(self, pid_coefficients):
+        """update pid"""
+        # self.pid.Ki = 1.0
+        self.pid.tunings = pid_coefficients
+        self.signal_send_pid.emit(self.pid.tunings)
 
     def prep_pid(self):
         """
         Set PID parameters
         """
-        self.pid = PID(0.06, 1e-5, 1e-1, setpoint=self.temperature_setpoint)
+        p, i, d = 0.06, 1e-5, 1e-1
+        self.pid = PID(p, i, d, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
-        self.pid.sample_time = self.sampling_rate*0.8
+        self.pid.sample_time = self.sampling_rate * 0.8
+        self.signal_send_pid.emit(self.pid.tunings)
 
     def update_ssr_duty(self):
         """
@@ -381,7 +417,7 @@ class NI9211(Worker):
         This calculates the duty with simple-pid package
         and updates it
         """
-        output = max(0, self.pid(self.temperature))        
+        output = max(0, self.pid(self.temperature))
         self.membrane_heater.set_ssd_duty(output)
         return output
 
@@ -407,8 +443,8 @@ class NI9211(Worker):
 
             # This is needed to reduce the data flow to the main.py
             if step % (STEP - 1) == 0 and step != 0:
-                p,i,d = self.pid.components
-                print(f'p {p:.0e} i {i:.0e} d {d:.0e}')
+                p, i, d = self.pid.components
+                # print(f"p {p:.0e} i {i:.0e} d {d:.0e}")
                 self.calculate_average()
                 self.send_processed_data_to_main_thread()
                 self.clear_datasets()
@@ -426,8 +462,8 @@ class NI9211(Worker):
         self.membrane_heater.set_ssd_duty(0)
         self.calculate_average()
         self.send_processed_data_to_main_thread()
-        self.sigAbortHeater.emit()
-        self.sigAbortThermocouple.emit()
+        self.signal_abort_heater.emit()
+        self.signal_abort_thermocouple.emit()
         self.pid = None
 
         self.thread_thermocouple.quit()
@@ -437,7 +473,7 @@ class NI9211(Worker):
 
         self.thread_heater = None
         self.thread_thermocouple = None
-        self.sigDone.emit(self.sensor_name)
+        self.signal_done.emit(self.sensor_name)
 
     @QtCore.pyqtSlot()
     def abort(self):

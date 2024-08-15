@@ -7,6 +7,7 @@ from components.docks.plots import PlotScaleDock
 from components.docks.control import ControlDock
 from components.docks.tempcontrol import HeaterControl, CathodeBoxTemperature
 from components.docks.analog_temperature import AnalogTemperatureGauge
+from components.docks.pid_tuning import PidTuning
 from components.docks.settings import SettingsDock
 from components.widgets.graph import Graph
 
@@ -16,73 +17,77 @@ class UIWindow(object):
         super().__init__()
         pg.setConfigOptions(imageAxisOrder="row-major")
 
-        self.MainWindow = QtWidgets.QMainWindow()
-        self.tabwidg = QtWidgets.QTabWidget()
+        self.main_window = QtWidgets.QMainWindow()
+        self.tab_widget = QtWidgets.QTabWidget()
         self.area = DockArea()
-        self.plotDock = Dock("Plots", size=(300, 400))
-        self.controlDock = ControlDock()
-        self.tempcontrolDock = HeaterControl()
-        self.cathodeBoxDock = CathodeBoxTemperature()
-        self.tGauge = AnalogTemperatureGauge()
-        self.logDock = LogDock()
+        self.plot_dock = Dock("Plots", size=(300, 400))
+        self.control_dock = ControlDock()
+        self.temperature_control_dock = HeaterControl()
+        self.cathode_box_dock = CathodeBoxTemperature()
+        self.pid_tuning_dock = PidTuning()
+        self.temperature_gauge_dock = AnalogTemperatureGauge()
+        self.log_dock = LogDock()
         [
-            i.setStretch(*(10, 20))
-            for i in [
-                self.controlDock,
-                self.logDock,
-                self.tempcontrolDock,
-                self.cathodeBoxDock,
-                self.tGauge,
+            dock.setStretch(*(10, 20))
+            for dock in [
+                self.control_dock,
+                self.log_dock,
+                self.temperature_control_dock,
+                self.cathode_box_dock,
+                self.temperature_gauge_dock,
             ]
         ]
-        self.controlDock.setStretch(*(10, 300))
+        self.control_dock.setStretch(*(10, 300))
         self.graph = Graph()
-        self.scaleDock = PlotScaleDock()
+        self.scale_dock = PlotScaleDock()
 
         self.settings_area = DockArea()
-        self.SettingsDock = SettingsDock()
-        self.logDock.setStretch(*(200, 100))
-        self.SettingsDock.setStretch(*(80, 100))
+        self.settings_dock = SettingsDock()
+        self.log_dock.setStretch(*(200, 100))
+        self.settings_dock.setStretch(*(80, 100))
 
-        self.MainWindow.setGeometry(20, 50, 1000, 600)
-        sizeObject = QtWidgets.QDesktopWidget().screenGeometry(-1)
+        self.main_window.setGeometry(20, 50, 1000, 600)
+        screen_geometry = QtWidgets.QDesktopWidget().screenGeometry(-1)
         # print(" Screen size : " + str(sizeObject.height()) + "x" + str(sizeObject.width()))
-        if sizeObject.height() < 1000:
-            self.MainWindow.showMaximized()
+        if screen_geometry.height() < 1000:
+            self.main_window.showMaximized()
 
         # self.MainWindow.showFullScreen()
-        self.MainWindow.setObjectName("Monitor")
-        self.MainWindow.setWindowTitle("Data Logger")
+        self.main_window.setObjectName("Monitor")
+        self.main_window.setWindowTitle("Temperature Control")
         # self.MainWindow.statusBar().showMessage("")
-        self.MainWindow.setAcceptDrops(True)
+        self.main_window.setAcceptDrops(True)
 
-        self.__setLayout()
+        self.set_layout()
 
-    def __setLayout(self):
-        self.MainWindow.setCentralWidget(self.tabwidg)
-        self.tabwidg.addTab(self.area, "Data")
+    def set_layout(self):
+        self.main_window.setCentralWidget(self.tab_widget)
+        self.tab_widget.addTab(self.area, "Data")
 
-        self.area.addDock(self.plotDock, "top")
-        self.area.addDock(self.controlDock, "left", self.plotDock)
-        self.area.addDock(self.scaleDock, "bottom", self.controlDock)
-        self.area.addDock(self.tempcontrolDock, "bottom", self.controlDock)
-        self.area.addDock(self.cathodeBoxDock, "bottom", self.tempcontrolDock)
-        # self.area.addDock(self.tGauge, "bottom", self.controlDock)
+        self.area.addDock(self.plot_dock, "top")
+        self.area.addDock(self.control_dock, "left", self.plot_dock)
+        self.area.addDock(self.scale_dock, "bottom", self.control_dock)
+        self.area.addDock(self.temperature_control_dock, "bottom", self.control_dock)
+        self.area.addDock(
+            self.cathode_box_dock, "bottom", self.temperature_control_dock
+        )
+        self.area.addDock(self.pid_tuning_dock, "bottom", self.control_dock)
 
-        self.plotDock.addWidget(self.graph)
+        self.plot_dock.addWidget(self.graph)
 
-        self.tabwidg.addTab(self.settings_area, "Settings")
-        self.settings_area.addDock(self.SettingsDock)
-        self.settings_area.addDock(self.logDock, "right")
+        self.tab_widget.addTab(self.settings_area, "Settings")
+        self.settings_area.addDock(self.settings_dock)
+        self.settings_area.addDock(self.log_dock, "right")
 
     def showMain(self):
-        self.MainWindow.show()
+        self.main_window.show()
 
 
 if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon("./icons/temperature.png"))
     ui = UIWindow()
     ui.showMain()
     sys.exit(app.exec_())

@@ -10,12 +10,35 @@ from readsettings import select_settings
 
 os.environ["BLINKA_FT232H"] = "1"  # Setting Environmental Variable
 
+RED = "\033[1;31m"
+GREEN = "\033[1;32m"
+BLUE = "\033[1;34m"
+RESET = "\033[0m"
+REDCIRCLE = "\U0001F534"
+BAD = "\U0000274C"
+
+ISDUMMY = False
 
 try:
     import board
     import digitalio
-except ImportError:
-    print("no board module for ft232h")
+except ImportError as e:
+    print(RED + "ft232h.py Error: " + RESET + f"{e}")
+    from dummy import board
+    from dummy import digitalio
+
+    print(
+        BLUE
+        + "ft232h.py WARNING:"
+        + RESET
+        + " importing"
+        + BLUE
+        + " DUMMY"
+        + RESET
+        + " dummy.board and dummy.digitalio for tests"
+    )
+    ISDUMMY = True
+
 
 config = select_settings(verbose=False)
 CHHEATER = config["FT232H"]["Heater Output"]["Pin"]
@@ -28,6 +51,8 @@ class HeaterContol(QtCore.QObject):
     PWM for SSD of the membrane heater.
     The PID value comes from worker.py thread.
     """
+
+    ISDUMMY = ISDUMMY
 
     def __init__(self, app):
         super().__init__()
@@ -67,7 +92,13 @@ class HeaterContol(QtCore.QObject):
                 time.sleep(DUTYCYCLE * (1 - self.duty))
                 self.app.processEvents()
         self.pin.value = False
-        print("HeaterControl: pin output set to False")
+        print(
+            REDCIRCLE
+            + BLUE
+            + " ft232h.HeaterControl"
+            + RESET
+            + ": pin output set to False"
+        )
 
     def __setThread(self):
         self.threadName = QtCore.QThread.currentThread().objectName()
@@ -114,8 +145,8 @@ def pin_config(pin_name, direction):
     }
     pin_board = pin_map.get(pin_name)
     if pin_board is None:
-        print("Pin name is not correct")
-        return None
+        raise ValueError(f"Pin name '{pin_name}' is not correct, 'pin_board' is 'None'")
+
     pin = digitalio.DigitalInOut(pin_board)
 
     if direction == "out":
@@ -123,7 +154,7 @@ def pin_config(pin_name, direction):
     elif direction == "in":
         pin.direction = digitalio.Direction.INPUT
     else:
-        print("direction is not correct")
+        print(BAD + +BLUE + " ft232h.pin_config" + RESET + ": direction is not correct")
     return pin
 
 
