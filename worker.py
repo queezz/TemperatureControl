@@ -400,7 +400,7 @@ class NI9211(Worker):
         """
         Set PID parameters
         """
-        p, i, d = 0.06, 1e-5, 1e-1
+        p, i, d = 1e-4, 1e-8, 5e-4
         self.pid = PID(p, i, d, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
         # self.pid.sample_time = self.sampling_rate * 0.8
