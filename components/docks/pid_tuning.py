@@ -91,14 +91,15 @@ class PidTuning(Dock):
         d: float
             differential coeffitient
         """
-        html_tag_1 = '<font size=6 color="#d1451b">'
-        html_tag_2 = '<font size=6 color = "#4275f5">'
+        html_tag_1 = '<font size=6 color="#0ad157">'
+        html_tag_2 = '<font size=6 color = "#d1b60a">'
+        html_tag_3 = '<font size=6 color = "#d10a8f">'
         close_tag = "</font>"
 
         self.pid_state_browser.setText(
             f"{html_tag_1}p={p:.0e} {close_tag}"
             f"&nbsp;&nbsp;&nbsp;{html_tag_2}i={i:.0e} {close_tag}"
-            f"&nbsp;&nbsp;&nbsp;{html_tag_2}d={d:.0e} {close_tag}"
+            f"&nbsp;&nbsp;&nbsp;{html_tag_3}d={d:.0e} {close_tag}"
         )
 
 

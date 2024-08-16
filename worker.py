@@ -174,13 +174,8 @@ class MAX6675(Worker):
         )
 
         # self.data = pd.concat([self.data, new_row], ignore_index=True)
-        # Fixing pandas future warning
-        non_empty_columns = new_row.dropna(axis=1, how="all").columns
-        # Ensure we also consider only those columns that exist in the original DataFrame for consistency
-        common_columns = self.data.columns.intersection(non_empty_columns)
-        # Step 2: Concatenate while focusing on these identified columns
         self.data = pd.concat(
-            [self.data[common_columns], new_row[common_columns]], ignore_index=True
+            [self.data.astype(new_row.dtypes), new_row.astype(self.data.dtypes)]
         )
 
     def calculate_average(self):
@@ -345,12 +340,6 @@ class NI9211(Worker):
         self.temperature = self.thermocouple.temperature
         self.cathodeBoxTemperature = self.thermocouple.cathodeBoxTemperature
 
-    def send_processed_data_to_main_thread(self):
-        """
-        Send processed data to main.py
-        """
-        self.send_step_data.emit([self.data, self.sensor_name])
-
     def clear_datasets(self):
         """
         Remove data from temporary dataframes
@@ -376,6 +365,7 @@ class NI9211(Worker):
                     self.temperature_setpoint,
                     self.qmssig,
                     self.cathodeBoxTemperature,
+                    *self.pid.components,
                 ]
             ),
             columns=self.columns,
@@ -413,7 +403,7 @@ class NI9211(Worker):
         p, i, d = 0.06, 1e-5, 1e-1
         self.pid = PID(p, i, d, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
-        self.pid.sample_time = self.sampling_rate * 0.8
+        # self.pid.sample_time = self.sampling_rate * 0.8
         self.signal_send_pid.emit(self.pid.tunings)
 
     def update_ssr_duty(self):
@@ -425,6 +415,12 @@ class NI9211(Worker):
         output = max(0, self.pid(self.temperature))
         self.membrane_heater.set_ssd_duty(output)
         return output
+
+    def send_processed_data_to_main_thread(self):
+        """
+        Send processed data to main.py
+        """
+        self.send_step_data.emit([self.data, self.sensor_name])
 
     # MARK: acquisition loop
     @QtCore.pyqtSlot()

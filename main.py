@@ -57,12 +57,21 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.pens = {
             "T": {"color": "#5999ff", "width": 2},
             "trigger": {"color": "#edbc34", "width": 2},
+            "p": {"color": "#0ad157", "width": 2},
+            "i": {"color": "#d1b60a", "width": 2},
+            "d": {"color": "#d10a8f", "width": 2},
         }
 
         self.temperatuere_curve_data = self.graph.temperature_plot.plot(
             pen=self.pens["T"]
         )
         self.graph.temperature_plot.setYRange(0, 320, 0)
+
+        self.pid_curves = {
+            component: self.graph.pid_plot.plot(pen=self.pens[component])
+            for component in ["p", "i", "d"]
+        }
+
         self.graph.pid_plot.setXLink(self.graph.temperature_plot)
 
         self.temperature_worker = None
@@ -223,6 +232,7 @@ class MainWidget(QtCore.QObject, UIWindow):
             self.main_window.showNormal()
             self.control_dock.setStretch(*(10, 300))  # minimize control dock width
 
+    # MARK: update plots
     def update_plots(self, sensor_name):
         """"""
         if sensor_name == "NI9211":
@@ -237,6 +247,10 @@ class MainWidget(QtCore.QObject, UIWindow):
             temperature = df["T"].values.astype(float)
             skip = self.calculate_skip_points(time.shape[0])
             self.temperatuere_curve_data.setData(time[::skip], temperature[::skip])
+
+            for component, curve in self.pid_curves.items():
+                values = df[component].values.astype(float)
+                curve.setData(time[::skip], values[::skip])
 
     # MARK: prep threads
     def prep_threads(self):

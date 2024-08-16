@@ -16,6 +16,9 @@ Temperature Columns:
   - "PresetT"
   - "Qms signal"
   - "Cathode Box T"
+  - "p"
+  - "i"
+  - "d"
 
 # ================================================
 #
