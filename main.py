@@ -4,6 +4,7 @@ Main loop of the app
 
 import sys
 import datetime
+from datetime import timedelta
 import os
 import pandas as pd
 from PyQt5 import QtGui, QtCore, QtWidgets
@@ -226,7 +227,13 @@ class MainWidget(QtCore.QObject, UIWindow):
         """"""
         if sensor_name == "NI9211":
             df = self.select_data_to_plot(sensor_name)
-            time = df["time"].values.astype(float)
+            # time = df["time"].values.astype(float)
+            utc_offset = 9
+            time = (
+                df["date"]
+                .apply(lambda x: (x - timedelta(hours=utc_offset)).timestamp())
+                .values
+            )
             temperature = df["T"].values.astype(float)
             skip = self.calculate_skip_points(time.shape[0])
             self.temperatuere_curve_data.setData(time[::skip], temperature[::skip])

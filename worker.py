@@ -7,6 +7,7 @@ are specified in channels.py. Adjust values there to affect the whole of Contorl
 
 # from channels import *
 import time, datetime
+from datetime import timedelta
 import numpy as np
 import pandas as pd
 from PyQt5 import QtCore
@@ -163,6 +164,8 @@ class MAX6675(Worker):
         Append new reading to dataframe
         """
         now = datetime.datetime.now()
+        # utc_offset = 9
+        # now = now.apply(lambda x: (x - timedelta(hours=utc_offset)).timestamp()).values
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
         new_row = pd.DataFrame(
@@ -360,6 +363,8 @@ class NI9211(Worker):
         Append new reading to dataframe
         """
         now = datetime.datetime.now()
+        # utc_offset = 9
+        # now = now.apply(lambda x: (x - timedelta(hours=utc_offset)).timestamp()).values
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
         new_row = pd.DataFrame(
