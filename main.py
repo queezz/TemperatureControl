@@ -54,25 +54,6 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.currentvalues = {i: 0 for i in ["T", "Cathode Box T"]}
         self.baratronsignal1 = 0
         self.baratronsignal2 = 0
-        self.pens = {
-            "T": {"color": "#5999ff", "width": 2},
-            "trigger": {"color": "#edbc34", "width": 2},
-            "p": {"color": "#0ad157", "width": 2},
-            "i": {"color": "#d1b60a", "width": 2},
-            "d": {"color": "#d10a8f", "width": 2},
-        }
-
-        self.temperatuere_curve_data = self.graph.temperature_plot.plot(
-            pen=self.pens["T"]
-        )
-        self.graph.temperature_plot.setYRange(0, 320, 0)
-
-        self.pid_curves = {
-            component: self.graph.pid_plot.plot(pen=self.pens[component])
-            for component in ["p", "i", "d"]
-        }
-
-        self.graph.pid_plot.setXLink(self.graph.temperature_plot)
 
         self.temperature_worker = None
 
@@ -245,12 +226,11 @@ class MainWidget(QtCore.QObject, UIWindow):
                 .values
             )
             temperature = df["T"].values.astype(float)
-            skip = self.calculate_skip_points(time.shape[0])
-            self.temperatuere_curve_data.setData(time[::skip], temperature[::skip])
+            self.graph.temperature_curve.setData(time, temperature)
 
-            for component, curve in self.pid_curves.items():
+            for component, curve in self.graph.pid_curves.items():
                 values = df[component].values.astype(float)
-                curve.setData(time[::skip], values[::skip])
+                curve.setData(time, values)
 
     # MARK: prep threads
     def prep_threads(self):
@@ -406,9 +386,6 @@ class MainWidget(QtCore.QObject, UIWindow):
         )
         self.temperature_gauge_dock.gaugeT.update_value(self.currentvalues["T"])
 
-    def calculate_skip_points(self, l, noskip=5000):
-        return 1 if l < noskip else l // noskip + 1
-
     def append_data(self, sensor_name):
         """
         Append new data to dataframe
@@ -416,6 +393,12 @@ class MainWidget(QtCore.QObject, UIWindow):
         self.datadict[sensor_name] = pd.concat(
             [self.datadict[sensor_name], self.newdata[sensor_name]], ignore_index=True
         )
+
+    def downsample_data(self, df, noskip=3000):
+        """downsample data"""
+        if df.shape[0] > noskip:
+            return df.iloc[::df.shape[0] // noskip + 1]
+        return df
 
     def select_data_to_plot(self, sensor_name):
         """
@@ -426,7 +409,7 @@ class MainWidget(QtCore.QObject, UIWindow):
             last_ts = df["date"].iloc[-1]
             timewindow = last_ts - pd.Timedelta(self.time_window, "seconds")
             df = df[df["date"] > timewindow]
-        return df
+        return self.downsample_data(df)
 
     # MARK: Save Data
     def save_data(self, sensor_name):
