@@ -4,6 +4,7 @@ NI9211 Acquisition Class
 import time, datetime
 import numpy as np
 import pandas as pd
+from scipy.signal import savgol_filter
 from PyQt5 import QtCore
 
 from .device import Sensor
@@ -32,6 +33,9 @@ class NI9211(Sensor):
         self.data = None
         self.temperature_setpoint = 0
         self.sampling_time = self.config["Sampling Time"]
+        self.smoothed_data = None
+        self.datapoints_to_keep = 100 # for smoothing
+        self.smoothing_window = 15
 
 
     def set_temp_worker(self, setpoint: int):
@@ -39,6 +43,7 @@ class NI9211(Sensor):
         needs pigpio daemon
         """
         self.data = pd.DataFrame(columns=self.columns)
+        self.smoothed_data = pd.DataFrame(columns=["T", "smoothed"])
         self.temperature_setpoint = setpoint
 
     @QtCore.pyqtSlot()
@@ -119,6 +124,16 @@ class NI9211(Sensor):
             [self.data.astype(new_row.dtypes), new_row.astype(self.data.dtypes)]
         )
 
+        # Smooth data (best to fix hardware issue, but let's use this for now).
+        self.smoothed_data.loc[len(self.smoothed_data)] = [self.temperature,self.temperature]
+        if len(self.smoothed_data) > self.smoothing_window:
+            self.smoothed_data['smoothed'] = savgol_filter(self.smoothed_data['T'], self.smoothing_window,1)
+
+        if len(self.smoothed_data) == self.datapoints_to_keep:
+            self.smoothed_data = self.smoothed_data.drop(self.smoothed_data.index[0])
+            self.smoothed_data = self.smoothed_data.reset_index(drop=True)
+            
+
     def calculate_average(self):
         """
         Average signal
@@ -145,7 +160,6 @@ class NI9211(Sensor):
         self.pid = PID(p, i, d, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
         self.pid.sample_time = self.sampling_time*self.STEP
-        print(self.pid.sample_time)
         self.signal_send_pid.emit(self.pid.tunings)
 
     def update_ssr_duty(self):
@@ -156,7 +170,7 @@ class NI9211(Sensor):
         """
         #output = max(0, self.pid(self.temperature))
         # Try average over STEP points to smooth derivative component
-        output = max(0, self.pid(self.average))
+        output = max(0, self.pid(self.smoothed_data['smoothed'].iloc[-1]))
         self.membrane_heater.set_ssd_duty(output)
         return output
 
@@ -184,13 +198,13 @@ class NI9211(Sensor):
             self.update_dataframe()
 
             # Update PWM with PID as fast as possible
-            # pidoutput = self.update_ssr_duty()
+            self.update_ssr_duty()
 
             # This is needed to reduce the data flow to the main.py
             if step % (self.STEP - 1) == 0 and step != 0:
-                # Update pid every STEP times to smooth signals
                 self.calculate_average()
-                self.update_ssr_duty()
+                # Update pid every STEP times to smooth signals
+                #self.update_ssr_duty()
                 self.send_processed_data_to_main_thread()
                 self.clear_datasets()
                 step = 0
