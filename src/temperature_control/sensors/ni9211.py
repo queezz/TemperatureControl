@@ -31,8 +31,8 @@ class NI9211(Sensor):
         self.columns = self.config["Temperature Columns"]
         self.data = None
         self.temperature_setpoint = 0
-        self.sampling_rate = self.config["NI9211"]["Tc0"]["Sampling Rate"]
-        self.sampling = 1 / self.sampling_rate
+        self.sampling_time = self.config["Sampling Time"]
+
 
     def set_temp_worker(self, setpoint: int):
         """
@@ -144,7 +144,8 @@ class NI9211(Sensor):
         p, i, d = 1e-4, 1e-8, 5e-4
         self.pid = PID(p, i, d, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
-        self.pid.sample_time = self.sampling_rate
+        self.pid.sample_time = self.sampling_time*self.STEP
+        print(self.pid.sample_time)
         self.signal_send_pid.emit(self.pid.tunings)
 
     def update_ssr_duty(self):
@@ -178,7 +179,7 @@ class NI9211(Sensor):
         step = 0
 
         while not (self.__abort):
-            time.sleep(self.sampling)
+            time.sleep(self.sampling_time)
             self.read_thermocouple()
             self.update_dataframe()
 

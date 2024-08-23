@@ -62,11 +62,9 @@ class Sensor(QtCore.QObject):
     def getStartTime(self):
         return self.__startTime
 
-    def setSampling(self, sampling):
+    def setSampling(self, sampling_time):
         """Set sampling time"""
-        self.sampling = sampling
-        # print(f"Updated sampling to {sampling}")
-
+        self.sampling_time = sampling_time
 
 if __name__ == "__main__":
     pass
