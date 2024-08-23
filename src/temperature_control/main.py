@@ -9,13 +9,15 @@ import os
 import pandas as pd
 from PyQt5 import QtGui, QtCore, QtWidgets
 
-from mainView import UIWindow
-from worker import Worker, NI9211
+from .mainView import UIWindow
+from .sensors.device import Sensor
+from .sensors.ni9211 import NI9211
+#from src.temperature_control.sensors.max6675 import MAX6675
 
-from ft232h import QmsSigSync
+from .sensors.ft232h import QmsSigSync
 
-import readsettings
-from striphtmltags import strip_tags
+from . import readsettings
+from .striphtmltags import strip_tags
 
 
 # must inherit QtCore.QObject in order to use 'connect'
@@ -275,7 +277,7 @@ class MainWidget(QtCore.QObject, UIWindow):
         [self.start_thread(workers[s], threads[s]) for s in self.sensor_names]
 
     # MARK: start thread
-    def start_thread(self, worker: Worker, thread: QtCore.QThread):
+    def start_thread(self, worker: Sensor, thread: QtCore.QThread):
         """
         Setup workers [Dataframe creation]
         - Creates instances of worker

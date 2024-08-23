@@ -6,7 +6,7 @@ Solid state relay PWM control
 import time
 import os
 from PyQt5 import QtCore
-from readsettings import select_settings
+from ..readsettings import select_settings
 
 os.environ["BLINKA_FT232H"] = "1"  # Setting Environmental Variable
 
@@ -24,8 +24,8 @@ try:
     import digitalio
 except ImportError as e:
     print(RED + "ft232h.py Error: " + RESET + f"{e}")
-    from dummy import board
-    from dummy import digitalio
+    from src.temperature_control.sensors.dummy import board
+    from src.temperature_control.sensors.dummy import digitalio
 
     print(
         BLUE

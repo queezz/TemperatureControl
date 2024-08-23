@@ -4,7 +4,7 @@ from pyqtgraph.dockarea import Dock
 
 
 from ..widgets.analoggauge import AnalogGaugeWidget
-from readsettings import select_settings
+from ...readsettings import select_settings
 
 config = select_settings(verbose=False)
 MAXTEMP = config["Max Temperature"]

@@ -1,11 +1,6 @@
 """
 This program is for NI-DAQ (NI-9211) communication.
 """
-
-import matplotlib.pyplot as plt
-import time
-import pandas as pd
-import datetime
 from PyQt5 import QtCore
 
 RED = "\033[1;31m"
@@ -19,7 +14,7 @@ try:
     import nidaqmx
 except ModuleNotFoundError as e:
     print(RED + "ni.py Error: " + RESET + f"{e}")
-    from dummy import nidaqmx
+    from .dummy import nidaqmx
 
     print(
         BLUE

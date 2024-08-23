@@ -1,13 +1,9 @@
-Settings Version: 1.0.0
-# Define your local settings in
-# localsettings = os.path.join(os.path.expanduser('~'),'.controlunit', 'settings.yml')
-# ~/.controlunit/settings.yml
-# If settings items are changed and settings version is higher then
-# the local one, local settings are ignored.
+Settings Version: 1.0.1
+# local_settings = join(expanduser("~"), ".temperatuer_control", "settings.yml")
 
-Data Folder: ../data/temp
+Data Folder: ../../../data/temperature
 # Save the info from Log Dock to this file in Data Folder
-Log File: controlunit.log
+Log File: temperature.log
 
 Temperature Columns:
   - "date"

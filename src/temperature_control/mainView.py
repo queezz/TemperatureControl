@@ -2,14 +2,14 @@ import pyqtgraph as pg
 from PyQt5 import QtGui, QtWidgets
 from pyqtgraph.dockarea import DockArea, Dock
 
-from components.docks.log import LogDock
-from components.docks.plots import PlotScaleDock
-from components.docks.control import ControlDock
-from components.docks.tempcontrol import HeaterControl, CathodeBoxTemperature
-from components.docks.analog_temperature import AnalogTemperatureGauge
-from components.docks.pid_tuning import PidTuning
-from components.docks.settings import SettingsDock
-from components.widgets.graph import Graph
+from .components.docks.log import LogDock
+from .components.docks.plots import PlotScaleDock
+from .components.docks.control import ControlDock
+from .components.docks.tempcontrol import HeaterControl, CathodeBoxTemperature
+from .components.docks.analog_temperature import AnalogTemperatureGauge
+from .components.docks.pid_tuning import PidTuning
+from .components.docks.settings import SettingsDock
+from .components.widgets.graph import Graph
 
 
 class UIWindow(object):

@@ -29,7 +29,7 @@ def select_settings(path_to_file="settings.yml", verbose=False):
     Check if there is local settings file and
     if its version is same as current, load local one.
     """
-    local_settings = join(expanduser("~"), ".controlunit", "settings.yml")
+    local_settings = join(expanduser("~"), ".temperatuer_control", "settings.yml")
 
     try:
         local_config = load_settings(local_settings)
@@ -41,8 +41,10 @@ def select_settings(path_to_file="settings.yml", verbose=False):
             return config
     except FileNotFoundError as ex:
         pass
-
-    config = load_settings(path_to_file)
+    
+    script_directory = os.path.dirname(os.path.abspath(__file__))
+    absolute_path_to_file = os.path.join(script_directory, path_to_file)
+    config = load_settings(absolute_path_to_file)
     if verbose:
         print(GOOD + f" Configuration file loaded:\n{os.path.abspath(path_to_file)}")
 
