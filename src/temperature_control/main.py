@@ -523,7 +523,6 @@ if __name__ == "__main__":
     import sys
     from __init__ import _temperature_base_path
     pth = str(_temperature_base_path / "icons/temperature.png")
-    print(pth)
 
     app = QtWidgets.QApplication([])
     app.setWindowIcon(QtGui.QIcon(pth))
