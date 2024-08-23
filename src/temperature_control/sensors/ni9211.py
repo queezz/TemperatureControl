@@ -159,7 +159,7 @@ class NI9211(Sensor):
         p, i, d = 1e-4, 1e-8, 5e-4
         self.pid = PID(p, i, d, setpoint=self.temperature_setpoint)
         self.pid.output_limits = (0, 1)
-        self.pid.sample_time = self.sampling_time*self.STEP
+        self.pid.sample_time = self.sampling_time
         self.signal_send_pid.emit(self.pid.tunings)
 
     def update_ssr_duty(self):

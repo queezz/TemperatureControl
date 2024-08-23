@@ -72,7 +72,7 @@ class Graph(pg.GraphicsLayoutWidget):
 
         self.pid_curves = {
             component: self.pid_plot.plot(pen=self.pens[component])
-            for component in ["p", "i", "d"]
+            for component in ["d","p", "i"]
         }
 
         self.pid_plot.setXLink(self.temperature_plot)
