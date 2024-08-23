@@ -95,8 +95,6 @@ class NI9211(Sensor):
         Append new reading to dataframe
         """
         now = datetime.datetime.now()
-        # utc_offset = 9
-        # now = now.apply(lambda x: (x - timedelta(hours=utc_offset)).timestamp()).values
         dSec = (now - self.__startTime).total_seconds()
         # ["date", "time", "T", "PresetT"]
         new_row = pd.DataFrame(
@@ -127,7 +125,7 @@ class NI9211(Sensor):
         """
         self.average = self.data["T"].mean()
 
-    # MARK: PID NI
+    # MARK: PID
     def set_preset_temp(self, newTemp: int):
         self.temperature_setpoint = newTemp
         self.pid.setpoint = self.temperature_setpoint
@@ -155,7 +153,9 @@ class NI9211(Sensor):
         This calculates the duty with simple-pid package
         and updates it
         """
-        output = max(0, self.pid(self.temperature))
+        #output = max(0, self.pid(self.temperature))
+        # Try average over STEP points to smooth derivative component
+        output = max(0, self.pid(self.average))
         self.membrane_heater.set_ssd_duty(output)
         return output
 
@@ -183,13 +183,13 @@ class NI9211(Sensor):
             self.update_dataframe()
 
             # Update PWM with PID as fast as possible
-            pidoutput = self.update_ssr_duty()
+            # pidoutput = self.update_ssr_duty()
 
             # This is needed to reduce the data flow to the main.py
             if step % (self.STEP - 1) == 0 and step != 0:
-                p, i, d = self.pid.components
-                # print(f"p {p:.0e} i {i:.0e} d {d:.0e}")
+                # Update pid every STEP times to smooth signals
                 self.calculate_average()
+                self.update_ssr_duty()
                 self.send_processed_data_to_main_thread()
                 self.clear_datasets()
                 step = 0
